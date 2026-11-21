@@ -262,7 +262,8 @@ private final class CoverWallView: NSView {
         // The window's corners on the leaning plane, then on the tilted wall,
         // from the plane's center with the y axis up. The far corners lie
         // well beyond the window: the plane recedes toward a horizon above it.
-        let corners = [(-1.0, -1.0), (1, -1), (-1, 1), (1, 1)].map { sx, sy in
+        let signs: [(CGFloat, CGFloat)] = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        let corners: [CGPoint] = signs.map { sx, sy in
             let screen = CGPoint(x: sx * size.width / 2, y: sy * size.height / 2)
             let y = screen.y * (1 - approach / distance) / (cos(pitch) - screen.y * sin(pitch) / distance)
             let x = screen.x * (1 + (y * sin(pitch) - approach) / distance)

@@ -496,7 +496,7 @@ private struct SettingsHero: View {
                 // hero's.
                 .visualEffect { [reach] content, geometry in
                     let top = geometry.frame(in: .scrollView).minY
-                    return content.opacity(min(max((top - reach + 40) / 80, 0), 1))
+                    return content.opacity(Double(min(max((top - reach + 40) / 80, 0), 1)))
                 }
             }
             .frame(height: height + reach)

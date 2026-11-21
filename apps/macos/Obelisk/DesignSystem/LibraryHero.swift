@@ -62,7 +62,7 @@ struct LibraryHero<Artwork: View, Logo: View>: View {
                     // Fully visible until its top nears the bar, gone a little
                     // past the bar's bottom edge.
                     let top = geometry.frame(in: .scrollView).minY
-                    return content.opacity(min(max((top - reach + 40) / 80, 0), 1))
+                    return content.opacity(Double(min(max((top - reach + 40) / 80, 0), 1)))
                 }
             }
             .heroFrame()

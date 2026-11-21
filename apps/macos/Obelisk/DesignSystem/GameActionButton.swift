@@ -181,8 +181,8 @@ private struct GameButtonProgress: View {
                     // of that moment, and the bar swung outside the button.
                     Capsule().fill(.white)
                         .frame(width: geometry.size.width * 0.3)
-                        .keyframeAnimator(initialValue: 0.0, repeating: !reduceMotion) { bar, travel in
-                            bar.offset(x: geometry.size.width * 0.7 * travel)
+                        .keyframeAnimator(initialValue: 0.0, repeating: !reduceMotion) { [width = geometry.size.width] bar, travel in
+                            bar.offset(x: width * 0.7 * travel)
                         } keyframes: { _ in
                             LinearKeyframe(1, duration: 0.9, timingCurve: .easeInOut)
                             LinearKeyframe(0, duration: 0.9, timingCurve: .easeInOut)
