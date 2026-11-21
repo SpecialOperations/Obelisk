@@ -2,34 +2,38 @@
 
 <div align="center">
   <img src="assets/readme/icon.png" alt="Obelisk icon" width="200" height="200">
-  <h1>Obelisk</h1>
+  <h1>Obelisk (MetalFX Fork)</h1>
   <p>
-    One launcher for every store.<br>
-    Download, update and play your games from one app.
+    Community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
+    Adds per-game <b>MetalFX Spatial</b> upscaling and <b>2× MetalFX Frame Generation</b> toggles to Launch Settings for the Linux engine.
   </p>
   <p>
-    <a href="https://getobelisk.app"><b>Website</b></a>
+    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Fork Release</b></a>
     ·
-    <a href="https://github.com/Zagrios/obelisk/releases/latest"><b>Download</b></a>
+    <a href="https://github.com/SpecialOperations/voile-lkd/releases/latest"><b>MetalFX Window Server (voile-lkd)</b></a>
     ·
-    <a href="https://discord.gg/h5a7F4rZ6f">Discord</a>
+    <a href="https://github.com/Zagrios/Obelisk">Upstream Obelisk</a>
     ·
-    <a href="https://github.com/Zagrios/obelisk/issues/new?template=bug_report.yml">Report a bug</a>
-    ·
-    <a href="https://github.com/Zagrios/obelisk/issues/new?template=feature_request.yml">Request a feature</a>
+    <a href="https://github.com/Zagrios/Obelisk/pull/111">Upstream PR #111</a>
   </p>
   <p>
-    <a href="https://github.com/Zagrios/obelisk/releases/latest"><img src="https://img.shields.io/github/v/release/Zagrios/obelisk?style=for-the-badge&label=version" alt="Latest version"></a>
-    <a href="https://github.com/Zagrios/obelisk/releases"><img src="https://img.shields.io/github/downloads/Zagrios/obelisk/total?style=for-the-badge" alt="Downloads"></a>
+    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><img src="https://img.shields.io/github/v/release/SpecialOperations/Obelisk?style=for-the-badge&label=fork%20release" alt="Latest fork release"></a>
     <img src="https://img.shields.io/badge/macOS-26.4%2B-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS 26.4 or later">
     <img src="https://img.shields.io/badge/Apple%20silicon-only-000000?style=for-the-badge" alt="Apple silicon only">
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/Zagrios/obelisk?style=for-the-badge" alt="License: GPL-3.0"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/SpecialOperations/Obelisk?style=for-the-badge" alt="License: GPL-3.0"></a>
   </p>
 </div>
+
+> **Fork notice:** This repository is a fork of [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) (all credit for Obelisk and Voile goes to Zagrios). It adds per-game **MetalFX Spatial** and **MetalFX Frame Generation** switches in Launch Settings ([PR #111](https://github.com/Zagrios/Obelisk/pull/111)), paired with the MetalFX-enabled `wsd` window server in [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd) ([PR #26](https://github.com/Zagrios/voile-lkd/pull/26)).
 
 <p align="center">
   <a href="https://getobelisk.app"><img src="assets/readme/macbook.png" alt="Obelisk's Home on a MacBook Pro: Rocket League, the recently played games and the games installed on this Mac" width="800"></a>
 </p>
+
+## Fork Features
+
+- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina display pixels with `MTLFXSpatialScaler` using zero-copy direct texture input.
+- **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Uses color-only `MTLFXFrameInterpolator` in `wsd` to insert interpolated midpoint frames (e.g., ~45–50 real FPS → ~90–100 displayed FPS on 120 Hz ProMotion displays) and chains directly into MetalFX Spatial when both are enabled.
 
 ## Contents
 
@@ -71,15 +75,23 @@ Windows games play too. Obelisk sets everything up for you: no bottles to create
 - Rosetta, for Windows games. If it is missing, Obelisk asks macOS to install it the first time a game needs it.
 - Disk space for your games. The first Windows game also downloads [Voile](https://github.com/Zagrios/voile), a few hundred MB, once.
 
-## Installation
+## Installation (MetalFX Fork)
 
-1. Download `Obelisk-<version>-arm64.dmg` from the [latest release](https://github.com/Zagrios/obelisk/releases/latest).
+1. Download `Obelisk-0.6.4-metalfx-arm64.dmg` from the [latest fork release](https://github.com/SpecialOperations/Obelisk/releases/latest).
 2. Open the disk image and drag **Obelisk** onto **Applications**.
-3. Open Obelisk from your Applications folder.
+3. Because this community fork build is ad-hoc signed (not notarized by Apple), remove macOS's quarantine flag once before opening:
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Obelisk.app
+   ```
+4. Launch Obelisk and start any Windows game once if you don't already have Voile installed, then install the companion MetalFX `wsd` window server from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) (one command):
+   ```sh
+   curl -fsSL https://github.com/SpecialOperations/voile-lkd/releases/latest/download/install-metalfx-wsd.sh | bash
+   ```
+5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial** and/or **MetalFX Frame Generation** on.
 
-Obelisk is signed and notarized by Apple, so it opens without a security warning.
+> **Note on auto-updates:** Accepting an upstream Obelisk auto-update in **Settings → Updates** will replace this fork with upstream [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) until [PR #111](https://github.com/Zagrios/Obelisk/pull/111) is merged. To revert the Voile `wsd` binary to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`.
 
-**Updating Obelisk:** Obelisk looks for a new version by itself. It downloads it in the background and installs it the next time you quit Obelisk. If you rarely do, it offers the new version in a window after a while. **Check for Updates…** in the Obelisk menu looks right away, and **Settings → Updates** lets Obelisk ask before downloading instead. **Beta versions**, in the same place, also gets the pre-releases of Obelisk and of the Voile engine, whichever version is newest. Turned off, Obelisk goes back to its latest release when you quit it, and Voile at the next Windows game launch. Your games, saves and sign-ins stay where they are.
+**Upstream installation:** If you want the official Apple-notarized release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/obelisk/releases/latest).
 
 ## Getting started
 
