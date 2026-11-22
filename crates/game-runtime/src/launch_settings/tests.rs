@@ -118,6 +118,7 @@ fn every_kind_of_choices() -> [Choices; 5] {
             render_percent: Some(100),
             metalfx_spatial: false,
             metalfx_framegen: false,
+            voice_processing: false,
             performance_hud: false,
             game_mode: Some(true),
         },
@@ -369,6 +370,26 @@ fn only_the_linux_engine_offers_metalfx_spatial_and_framegen() {
     let rosetta = chosen(OTHER, on(Engine::Rosetta));
     assert!(!rosetta.settings.metalfx_spatial);
     assert!(!rosetta.settings.metalfx_framegen);
+    assert_eq!(rosetta.choices, Choices::default());
+}
+
+#[test]
+fn only_the_linux_engine_offers_voice_processing() {
+    assert!(offer(Engine::Linux).voice_processing);
+    assert!(!offer(Engine::Rosetta).voice_processing);
+
+    let on = |engine| Choices {
+        engine: Some(engine),
+        voice_processing: true,
+        ..Choices::default()
+    };
+
+    let linux = chosen(OTHER, on(Engine::Linux));
+    assert!(linux.settings.voice_processing);
+    assert_eq!(linux.choices, on(Engine::Linux));
+
+    let rosetta = chosen(OTHER, on(Engine::Rosetta));
+    assert!(!rosetta.settings.voice_processing);
     assert_eq!(rosetta.choices, Choices::default());
 }
 

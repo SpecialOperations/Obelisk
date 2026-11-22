@@ -1387,6 +1387,7 @@ fn a_configuration_reaches_its_game_session_whole() {
             render_percent: 50,
             metalfx_spatial: true,
             metalfx_framegen: true,
+            voice_processing: true,
             game_mode: false,
             locale: Some("it_IT".into()),
         },
@@ -1409,6 +1410,13 @@ fn a_configuration_reaches_its_game_session_whole() {
             "metalfx_framegen",
             Settings {
                 metalfx_framegen: false,
+                ..config.settings.clone()
+            },
+        ),
+        (
+            "voice_processing",
+            Settings {
+                voice_processing: false,
                 ..config.settings.clone()
             },
         ),

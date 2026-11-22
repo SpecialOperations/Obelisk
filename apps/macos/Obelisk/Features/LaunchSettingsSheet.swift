@@ -225,6 +225,13 @@ struct LaunchSettingsSheet: View {
                             performanceHudRow(settings)
                         }
                     }
+                    if model.engineOffer?.voiceProcessing == true {
+                        SheetSection(title: L10n.string("ui.launch_settings.audio")) {
+                            ObeliskCard {
+                                voiceProcessingRow(settings)
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 22)
@@ -415,6 +422,22 @@ struct LaunchSettingsSheet: View {
                 .labelsHidden()
                 .pointerCursor()
                 .accessibilityIdentifier("launch-settings-performance-hud")
+        }
+    }
+
+    private func voiceProcessingRow(_ settings: LaunchSettings) -> some View {
+        ObeliskRow(title: L10n.string("ui.launch_settings.voice_processing")) {
+            SymbolTile(name: "mic.fill", colors: TileColors.green)
+        } detail: {
+            Text(L10n.string("ui.launch_settings.voice_processing_detail"))
+        } accessory: {
+            Toggle(L10n.string("ui.launch_settings.voice_processing"),
+                   isOn: Binding(get: { settings.voiceProcessing },
+                                 set: { enabled in model.choose { $0.voiceProcessing = enabled } }))
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .pointerCursor()
+                .accessibilityIdentifier("launch-settings-voice-processing")
         }
     }
 

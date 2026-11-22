@@ -240,6 +240,9 @@ impl Adapter for LinuxEngine {
         if config.settings.metalfx_framegen {
             arguments.extend(["--metalfx-framegen".to_owned(), "on".to_owned()]);
         }
+        if config.settings.voice_processing {
+            arguments.extend(["--voice-processing".to_owned(), "on".to_owned()]);
+        }
         // Without it, macOS turns Game Mode on while the game is full screen.
         if !config.settings.game_mode {
             arguments.extend(["--game-mode".to_owned(), "off".to_owned()]);

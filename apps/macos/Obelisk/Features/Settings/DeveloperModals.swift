@@ -362,10 +362,10 @@ final class DeveloperModals {
             LaunchEngineOffer(engine: .rosetta, translator: .rosetta, defaultGraphics: .d3dMetal, graphics: [
                 LaunchGraphicsOffer(graphics: .d3dMetal, options: [.rayTracing]),
                 LaunchGraphicsOffer(graphics: .dxmt, options: []),
-            ], lowestRenderPercent: nil, metalfx: false, gameMode: false),
+            ], lowestRenderPercent: nil, metalfx: false, voiceProcessing: false, gameMode: false),
             LaunchEngineOffer(engine: .linux, translator: .fex, defaultGraphics: .dxmt,
                               graphics: [LaunchGraphicsOffer(graphics: .dxmt, options: [])],
-                              lowestRenderPercent: 1, metalfx: true, gameMode: true),
+                              lowestRenderPercent: 1, metalfx: true, voiceProcessing: true, gameMode: true),
         ]
         let engine = choices.engine ?? .rosetta
         let offer = engines.first { $0.engine == engine } ?? engines[0]
@@ -377,6 +377,7 @@ final class DeveloperModals {
                               renderPercent: renderPercent,
                               metalfxSpatial: offer.metalfx && choices.metalfxSpatial,
                               metalfxFramegen: offer.metalfx && choices.metalfxFramegen,
+                              voiceProcessing: offer.voiceProcessing && choices.voiceProcessing,
                               performanceHud: choices.performanceHud,
                               gameMode: !offer.gameMode || choices.gameMode ?? true,
                               choices: choices, defaultEngine: .rosetta, engines: engines)

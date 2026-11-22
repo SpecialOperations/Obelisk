@@ -5,7 +5,7 @@
   <h1>Obelisk (MetalFX Fork)</h1>
   <p>
     Community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Adds per-game <b>MetalFX Spatial</b> upscaling and <b>2× MetalFX Frame Generation</b> toggles to Launch Settings for the Linux engine.
+    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, and <b>Mic Voice Isolation</b> toggles to Launch Settings for the Linux engine.
   </p>
   <p>
     <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Fork Release</b></a>
@@ -34,9 +34,10 @@
 
 - **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
 - **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
+- **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings**. Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
 - **Linux-engine stability & polish** (included automatically via the companion [voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) installer):
   - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
-  - Fixes for intermittent emulation crashes and hangs during heavy scene loads and anti-cheat/thread suspension.
+  - Fixes for intermittent emulation crashes and deadlocks during heavy scene loads, garbage-collection thread suspension, and rapid ptrace attach/detach churn.
   - Fix for in-game MediaFoundation video player crashes when switching or seeking streams.
   - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
 
@@ -92,7 +93,7 @@ Windows games play too. Obelisk sets everything up for you: no bottles to create
    ```sh
    curl -fsSL https://github.com/SpecialOperations/voile-lkd/releases/latest/download/install-metalfx-wsd.sh | bash
    ```
-5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial** and/or **MetalFX Frame Generation** on.
+5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial**, **MetalFX Frame Generation**, and/or **Mic Voice Isolation** on.
 
 > **Note on auto-updates:** Accepting an upstream Obelisk auto-update in **Settings → Updates** will replace this fork with upstream [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) until [PR #111](https://github.com/Zagrios/Obelisk/pull/111) is merged. To revert the Voile `wsd` binary to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`.
 

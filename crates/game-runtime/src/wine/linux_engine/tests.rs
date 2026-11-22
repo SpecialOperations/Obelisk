@@ -265,6 +265,40 @@ fn metalfx_options_reach_the_launcher_and_window_server() {
     assert!(!engine.contains("--metalfx-framegen"), "{engine}");
 }
 
+#[test]
+fn voice_processing_reaches_the_launcher_and_window_server() {
+    let (_directory, root) = installation();
+    let install = root.join("install");
+    fs::create_dir_all(&install).unwrap();
+    fs::write(install.join("Game.exe"), pe()).unwrap();
+    let mut config = linux_config(&root);
+
+    let off = wine::target::<Plain>(
+        &config,
+        &game(&install),
+        &launch_target(&install.join("Game.exe"), &[]),
+        HashMap::new(),
+    )
+    .unwrap();
+    assert!(options(&off, "--voice-processing").is_empty());
+
+    config.settings.voice_processing = true;
+    let on = wine::target::<Plain>(
+        &config,
+        &game(&install),
+        &launch_target(&install.join("Game.exe"), &[]),
+        HashMap::new(),
+    )
+    .unwrap();
+    assert_eq!(options(&on, "--voice-processing"), ["on"]);
+
+    let (engine, _) = run_launcher(&root, &["--voice-processing", "on"], &[]);
+    let recorded = fs::read_to_string(root.join("wsd.txt")).unwrap();
+    let lines: Vec<&str> = recorded.lines().collect();
+    assert_eq!(lines[2..], ["--voice-processing"]);
+    assert!(!engine.contains("--voice-processing"), "{engine}");
+}
+
 /// A Steam game whose program is `Game/start_protected_game.exe`, in a
 /// runtime that carries steam-hostpid.so when `host_pid`.
 fn steam_target(root: &Path, host_pid: bool) -> (wine::Config, Target) {

@@ -7092,6 +7092,7 @@ public struct LaunchChoices: Equatable, Hashable {
     public var renderPercent: UInt32?
     public var metalfxSpatial: Bool
     public var metalfxFramegen: Bool
+    public var voiceProcessing: Bool
     public var performanceHud: Bool
     public var gameMode: Bool?
 
@@ -7100,7 +7101,7 @@ public struct LaunchChoices: Equatable, Hashable {
     public init(
         /**
          * What the player adds to the game's command line, as typed.
-         */arguments: String? = nil, engine: LaunchEngine? = nil, graphics: LaunchGraphics? = nil, rayTracing: Bool? = nil, renderPercent: UInt32? = nil, metalfxSpatial: Bool = false, metalfxFramegen: Bool = false, performanceHud: Bool = false, gameMode: Bool? = nil) {
+         */arguments: String? = nil, engine: LaunchEngine? = nil, graphics: LaunchGraphics? = nil, rayTracing: Bool? = nil, renderPercent: UInt32? = nil, metalfxSpatial: Bool = false, metalfxFramegen: Bool = false, voiceProcessing: Bool = false, performanceHud: Bool = false, gameMode: Bool? = nil) {
         self.arguments = arguments
         self.engine = engine
         self.graphics = graphics
@@ -7108,6 +7109,7 @@ public struct LaunchChoices: Equatable, Hashable {
         self.renderPercent = renderPercent
         self.metalfxSpatial = metalfxSpatial
         self.metalfxFramegen = metalfxFramegen
+        self.voiceProcessing = voiceProcessing
         self.performanceHud = performanceHud
         self.gameMode = gameMode
     }
@@ -7135,6 +7137,7 @@ public struct FfiConverterTypeLaunchChoices: FfiConverterRustBuffer {
                 renderPercent: FfiConverterOptionUInt32.read(from: &buf), 
                 metalfxSpatial: FfiConverterBool.read(from: &buf), 
                 metalfxFramegen: FfiConverterBool.read(from: &buf), 
+                voiceProcessing: FfiConverterBool.read(from: &buf), 
                 performanceHud: FfiConverterBool.read(from: &buf), 
                 gameMode: FfiConverterOptionBool.read(from: &buf)
         )
@@ -7148,6 +7151,7 @@ public struct FfiConverterTypeLaunchChoices: FfiConverterRustBuffer {
         FfiConverterOptionUInt32.write(value.renderPercent, into: &buf)
         FfiConverterBool.write(value.metalfxSpatial, into: &buf)
         FfiConverterBool.write(value.metalfxFramegen, into: &buf)
+        FfiConverterBool.write(value.voiceProcessing, into: &buf)
         FfiConverterBool.write(value.performanceHud, into: &buf)
         FfiConverterOptionBool.write(value.gameMode, into: &buf)
     }
@@ -7190,6 +7194,10 @@ public struct LaunchEngineOffer: Equatable, Hashable {
      */
     public var metalfx: Bool
     /**
+     * Whether its window server offers VoiceProcessingIO echo cancellation and Voice Isolation.
+     */
+    public var voiceProcessing: Bool
+    /**
      * Whether it can keep macOS's Game Mode off a game.
      */
     public var gameMode: Bool
@@ -7208,6 +7216,9 @@ public struct LaunchEngineOffer: Equatable, Hashable {
          * Whether its window server offers MetalFX Spatial and Frame Generation.
          */metalfx: Bool, 
         /**
+         * Whether its window server offers VoiceProcessingIO echo cancellation and Voice Isolation.
+         */voiceProcessing: Bool, 
+        /**
          * Whether it can keep macOS's Game Mode off a game.
          */gameMode: Bool) {
         self.engine = engine
@@ -7216,6 +7227,7 @@ public struct LaunchEngineOffer: Equatable, Hashable {
         self.graphics = graphics
         self.lowestRenderPercent = lowestRenderPercent
         self.metalfx = metalfx
+        self.voiceProcessing = voiceProcessing
         self.gameMode = gameMode
     }
 
@@ -7241,6 +7253,7 @@ public struct FfiConverterTypeLaunchEngineOffer: FfiConverterRustBuffer {
                 graphics: FfiConverterSequenceTypeLaunchGraphicsOffer.read(from: &buf), 
                 lowestRenderPercent: FfiConverterOptionUInt32.read(from: &buf), 
                 metalfx: FfiConverterBool.read(from: &buf), 
+                voiceProcessing: FfiConverterBool.read(from: &buf), 
                 gameMode: FfiConverterBool.read(from: &buf)
         )
     }
@@ -7252,6 +7265,7 @@ public struct FfiConverterTypeLaunchEngineOffer: FfiConverterRustBuffer {
         FfiConverterSequenceTypeLaunchGraphicsOffer.write(value.graphics, into: &buf)
         FfiConverterOptionUInt32.write(value.lowestRenderPercent, into: &buf)
         FfiConverterBool.write(value.metalfx, into: &buf)
+        FfiConverterBool.write(value.voiceProcessing, into: &buf)
         FfiConverterBool.write(value.gameMode, into: &buf)
     }
 }
@@ -7353,6 +7367,10 @@ public struct LaunchSettings: Equatable, Hashable {
      */
     public var metalfxFramegen: Bool
     /**
+     * CoreAudio VoiceProcessingIO echo cancellation and Voice Isolation mic mode.
+     */
+    public var voiceProcessing: Bool
+    /**
      * Metal's Performance HUD shows over the game, whatever renders it.
      */
     public var performanceHud: Bool
@@ -7390,6 +7408,9 @@ public struct LaunchSettings: Equatable, Hashable {
          * MetalFX Frame Generation inserts interpolated frames on macOS 26+.
          */metalfxFramegen: Bool, 
         /**
+         * CoreAudio VoiceProcessingIO echo cancellation and Voice Isolation mic mode.
+         */voiceProcessing: Bool, 
+        /**
          * Metal's Performance HUD shows over the game, whatever renders it.
          */performanceHud: Bool, 
         /**
@@ -7411,6 +7432,7 @@ public struct LaunchSettings: Equatable, Hashable {
         self.renderPercent = renderPercent
         self.metalfxSpatial = metalfxSpatial
         self.metalfxFramegen = metalfxFramegen
+        self.voiceProcessing = voiceProcessing
         self.performanceHud = performanceHud
         self.gameMode = gameMode
         self.choices = choices
@@ -7440,6 +7462,7 @@ public struct FfiConverterTypeLaunchSettings: FfiConverterRustBuffer {
                 renderPercent: FfiConverterUInt32.read(from: &buf), 
                 metalfxSpatial: FfiConverterBool.read(from: &buf), 
                 metalfxFramegen: FfiConverterBool.read(from: &buf), 
+                voiceProcessing: FfiConverterBool.read(from: &buf), 
                 performanceHud: FfiConverterBool.read(from: &buf), 
                 gameMode: FfiConverterBool.read(from: &buf), 
                 choices: FfiConverterTypeLaunchChoices.read(from: &buf), 
@@ -7455,6 +7478,7 @@ public struct FfiConverterTypeLaunchSettings: FfiConverterRustBuffer {
         FfiConverterUInt32.write(value.renderPercent, into: &buf)
         FfiConverterBool.write(value.metalfxSpatial, into: &buf)
         FfiConverterBool.write(value.metalfxFramegen, into: &buf)
+        FfiConverterBool.write(value.voiceProcessing, into: &buf)
         FfiConverterBool.write(value.performanceHud, into: &buf)
         FfiConverterBool.write(value.gameMode, into: &buf)
         FfiConverterTypeLaunchChoices.write(value.choices, into: &buf)

@@ -27,7 +27,7 @@ set -u
 unset DYLD_INSERT_LIBRARIES
 runtime=$1 home=$2 install=$3 cwd=$4
 shift 4
-graphics=dxmt render_percent= metalfx_spatial=off metalfx_framegen=off game_mode=on binds= guest_env=()
+graphics=dxmt render_percent= metalfx_spatial=off metalfx_framegen=off voice_processing=off game_mode=on binds= guest_env=()
 while [ $# -gt 0 ] && [ "$1" != "--" ]; do
     [ $# -ge 2 ] || exit 2
     case $1 in
@@ -35,6 +35,7 @@ while [ $# -gt 0 ] && [ "$1" != "--" ]; do
     --render-percent) render_percent=$2 ;;
     --metalfx-spatial) metalfx_spatial=$2 ;;
     --metalfx-framegen) metalfx_framegen=$2 ;;
+    --voice-processing) voice_processing=$2 ;;
     --game-mode) game_mode=$2 ;;
     --bind) binds="$binds;$2" ;;
     --env) guest_env+=(--env "$2") ;;
@@ -172,6 +173,7 @@ wsd_args=(--dir "$sockets")
 [ -n "$render_percent" ] && wsd_args+=(--render-percent "$render_percent")
 [ "$metalfx_spatial" = on ] && wsd_args+=(--metalfx-spatial)
 [ "$metalfx_framegen" = on ] && wsd_args+=(--metalfx-framegen)
+[ "$voice_processing" = on ] && wsd_args+=(--voice-processing)
 "$app/Contents/MacOS/wsd" "${wsd_args[@]}" &
 helpers+=($!)
 if [ "$graphics" = d3dmetal ]; then

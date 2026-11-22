@@ -9,6 +9,7 @@ final class LaunchSettingsModelTests: XCTestCase {
             renderPercent: engine == .linux ? choices.renderPercent ?? RenderPercent.native : RenderPercent.native,
             metalfxSpatial: engine == .linux && choices.metalfxSpatial,
             metalfxFramegen: engine == .linux && choices.metalfxFramegen,
+            voiceProcessing: engine == .linux && choices.voiceProcessing,
             performanceHud: choices.performanceHud, gameMode: engine != .linux || choices.gameMode ?? true,
             choices: choices, defaultEngine: .rosetta,
             engines: [
@@ -18,12 +19,12 @@ final class LaunchSettingsModelTests: XCTestCase {
                         LaunchGraphicsOffer(graphics: .d3dMetal, options: [.rayTracing]),
                         LaunchGraphicsOffer(graphics: .dxmt, options: []),
                     ],
-                    lowestRenderPercent: nil, metalfx: false, gameMode: false
+                    lowestRenderPercent: nil, metalfx: false, voiceProcessing: false, gameMode: false
                 ),
                 LaunchEngineOffer(
                     engine: .linux, translator: .fex, defaultGraphics: .dxmt,
                     graphics: [LaunchGraphicsOffer(graphics: .dxmt, options: [])],
-                    lowestRenderPercent: 1, metalfx: true, gameMode: true
+                    lowestRenderPercent: 1, metalfx: true, voiceProcessing: true, gameMode: true
                 ),
             ]
         )
@@ -102,6 +103,29 @@ final class LaunchSettingsModelTests: XCTestCase {
         model.choose { $0.metalfxFramegen = true }
         try await waitUntil { model.settings?.metalfxSpatial == true && model.settings?.metalfxFramegen == true }
         XCTAssertEqual(saved.last, LaunchChoices(engine: .linux, metalfxSpatial: true, metalfxFramegen: true))
+    }
+
+    @MainActor
+    func testVoiceProcessingIsOfferedByTheLinuxEngineOnlyAndTurnsOn() async throws {
+        var saved: [LaunchChoices] = []
+        let model = LaunchSettingsModel(
+            load: { Self.settings() },
+            save: { choices in
+                saved.append(choices)
+                return Self.settings(choices: choices, engine: choices.engine ?? .rosetta)
+            }
+        )
+        await model.appear()
+        XCTAssertEqual(model.engineOffer?.voiceProcessing, false)
+
+        model.choose { $0.engine = .linux }
+        try await waitUntil { model.settings?.engine == .linux }
+        XCTAssertEqual(model.engineOffer?.voiceProcessing, true)
+        XCTAssertEqual(model.settings?.voiceProcessing, false)
+
+        model.choose { $0.voiceProcessing = true }
+        try await waitUntil { model.settings?.voiceProcessing == true }
+        XCTAssertEqual(saved.last, LaunchChoices(engine: .linux, voiceProcessing: true))
     }
 
     @MainActor

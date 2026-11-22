@@ -70,6 +70,10 @@ pub struct Settings {
     /// true only on an engine that offers it.
     #[serde(default)]
     pub metalfx_framegen: bool,
+    /// CoreAudio VoiceProcessingIO echo cancellation and Voice Isolation mic mode;
+    /// true only on an engine that offers it.
+    #[serde(default)]
+    pub voice_processing: bool,
     /// macOS may turn its Game Mode on for the game; false only on an engine
     /// that can keep it off.
     #[serde(default = "game_mode")]
@@ -238,6 +242,9 @@ pub struct Choices {
     /// MetalFX Frame Generation inserts interpolated frames on macOS 26+.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub metalfx_framegen: bool,
+    /// CoreAudio VoiceProcessingIO echo cancellation and Voice Isolation mic mode.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub voice_processing: bool,
     /// Metal's Performance HUD shows over the game, whatever renders it.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub performance_hud: bool,
@@ -271,6 +278,8 @@ pub struct EngineOffer {
     pub lowest_render_percent: Option<u32>,
     /// Whether its window server offers MetalFX Spatial and Frame Generation.
     pub metalfx: bool,
+    /// Whether its window server offers VoiceProcessingIO echo cancellation and Voice Isolation.
+    pub voice_processing: bool,
     /// Whether it can keep macOS's Game Mode off a game.
     pub game_mode: bool,
 }
@@ -302,6 +311,7 @@ pub const ENGINES: [EngineOffer; 2] = [
         ],
         lowest_render_percent: None,
         metalfx: false,
+        voice_processing: false,
         game_mode: false,
     },
     EngineOffer {
@@ -320,6 +330,7 @@ pub const ENGINES: [EngineOffer; 2] = [
         // wsd keeps the desktop at 640x480 pixels or more: on a Retina MacBook, below about 25 gives the same one.
         lowest_render_percent: Some(1),
         metalfx: true,
+        voice_processing: true,
         game_mode: true,
     },
 ];
@@ -379,6 +390,7 @@ impl Choices {
                 .unwrap_or(FULL_RENDER_PERCENT),
             metalfx_spatial: offered.metalfx && self.metalfx_spatial,
             metalfx_framegen: offered.metalfx && self.metalfx_framegen,
+            voice_processing: offered.voice_processing && self.voice_processing,
             game_mode: self
                 .game_mode
                 .filter(|_| offered.game_mode)
@@ -408,6 +420,7 @@ impl Choices {
                 .then_some(applied.render_percent),
             metalfx_spatial: applied.metalfx_spatial,
             metalfx_framegen: applied.metalfx_framegen,
+            voice_processing: applied.voice_processing,
             performance_hud: self.performance_hud,
             game_mode: (applied.game_mode != default_game_mode(profile, applied.engine))
                 .then_some(applied.game_mode),

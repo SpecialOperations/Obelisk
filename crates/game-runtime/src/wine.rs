@@ -207,6 +207,9 @@ impl Config {
         if self.settings.metalfx_framegen {
             header.push_str(" metalfx_framegen=on");
         }
+        if self.settings.voice_processing {
+            header.push_str(" voice_processing=on");
+        }
         if !self.settings.game_mode {
             header.push_str(" game_mode=off");
         }
