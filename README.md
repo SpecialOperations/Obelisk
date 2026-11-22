@@ -30,11 +30,15 @@
   <a href="https://getobelisk.app"><img src="assets/readme/macbook.png" alt="Obelisk's Home on a MacBook Pro: Rocket League, the recently played games and the games installed on this Mac" width="800"></a>
 </p>
 
-## Fork Features
+## Fork Features & Improvements
 
-- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina display pixels with `MTLFXSpatialScaler` using zero-copy direct texture input.
-- **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Uses color-only `MTLFXFrameInterpolator` in `wsd` to insert interpolated midpoint frames (e.g., ~45–50 real FPS → ~90–100 displayed FPS on 120 Hz ProMotion displays) and chains directly into MetalFX Spatial when both are enabled.
-- **Bundled Linux-engine stability fixes** (installed automatically by `install-metalfx-wsd.sh` from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd)): `wsd` Dock icon deferral (stops helpers like `yt-dlp.exe` from hijacking the Dock icon), FEXCore push/pop/ret signal-boundary crash fix ([voile-lkd#25](https://github.com/Zagrios/voile-lkd/issues/25)), LKD detached ptrace `SIGSTOP` guard, Neptune 512 MiB upload cap, and Wine 11.0 `mf.dll` MediaFoundation flush null-check patch.
+- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
+- **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
+- **Linux-engine stability & polish** (included automatically via the companion [voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) installer):
+  - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
+  - Fixes for intermittent emulation crashes and hangs during heavy scene loads and anti-cheat/thread suspension.
+  - Fix for in-game MediaFoundation video player crashes when switching or seeking streams.
+  - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
 
 ## Contents
 
