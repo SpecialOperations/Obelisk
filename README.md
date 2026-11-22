@@ -34,6 +34,7 @@
 
 - **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina display pixels with `MTLFXSpatialScaler` using zero-copy direct texture input.
 - **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Uses color-only `MTLFXFrameInterpolator` in `wsd` to insert interpolated midpoint frames (e.g., ~45–50 real FPS → ~90–100 displayed FPS on 120 Hz ProMotion displays) and chains directly into MetalFX Spatial when both are enabled.
+- **Bundled Linux-engine stability fixes** (installed automatically by `install-metalfx-wsd.sh` from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd)): `wsd` Dock icon deferral (stops helpers like `yt-dlp.exe` from hijacking the Dock icon), FEXCore push/pop/ret signal-boundary crash fix ([voile-lkd#25](https://github.com/Zagrios/voile-lkd/issues/25)), LKD detached ptrace `SIGSTOP` guard, Neptune 512 MiB upload cap, and Wine 11.0 `mf.dll` MediaFoundation flush null-check patch.
 
 ## Contents
 
