@@ -90,13 +90,10 @@ Windows games play too. Obelisk sets everything up for you: no bottles to create
    ```sh
    xattr -dr com.apple.quarantine /Applications/Obelisk.app
    ```
-4. Launch Obelisk FX and start any Windows game once if you don't already have Voile installed, then install the companion MetalFX `wsd` window server from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) (one command):
-   ```sh
-   curl -fsSL https://github.com/SpecialOperations/voile-lkd/releases/latest/download/install-metalfx-wsd.sh | bash
-   ```
+4. Launch **Obelisk FX** and start any Windows game — Obelisk FX automatically downloads the base Voile runtime and automatically fetches, verifies, and applies the **Obelisk FX** Linux-engine runtime overlay (MetalFX, Frame Generation, Voice Isolation, clipboard sync, and in-game video playback) from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) with no terminal scripts needed.
 5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial**, **MetalFX Frame Generation**, and/or **Mic Voice Isolation** on.
 
-> **Note:** Obelisk FX shares the `com.zagrios.obelisk` library folder so your installed games, prefixes, and Keychain sessions carry over seamlessly. To revert the Voile runtime to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`.
+> **Note:** Obelisk FX shares the `com.zagrios.obelisk` library folder so your installed games, prefixes, and Keychain sessions carry over seamlessly. To revert the Voile runtime to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`. (Manual terminal install is still available if desired via [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest).)
 
 **Upstream installation:** If you want the official Apple-notarized release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk/releases/latest).
 

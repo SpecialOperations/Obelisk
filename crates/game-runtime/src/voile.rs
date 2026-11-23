@@ -30,6 +30,7 @@ use std::{
 };
 
 mod feed;
+pub(crate) mod fx_overlay;
 
 use feed::Offered;
 pub(crate) use feed::refresh;
@@ -294,11 +295,18 @@ impl Offer {
     }
 }
 
+/// Whether `Voile/current` is a manual developer runtime (not managed by
+/// Obelisk FX's automatic overlay).
+fn manual_development(root: &Path) -> Option<PathBuf> {
+    let dev = development(root)?;
+    (!fx_overlay::is_managed(root)).then_some(dev)
+}
+
 /// What a launch makes of the runtimes in `root`, for a game whose profile
 /// needs `minimum` or a newer release. A newer release comes with what each
 /// release newer than the one in place brings, up to it, newest first.
 pub(crate) fn standing(root: &Path, minimum: Option<&str>) -> Standing {
-    if development(root).is_some() {
+    if manual_development(root).is_some() {
         return Standing::Current;
     }
     let offer = Offer::read(root);
@@ -370,6 +378,29 @@ impl Install {
         (self.received.load(Ordering::Acquire), total)
     }
 
+    /// Updates the progress counters (used by the Obelisk FX overlay downloader).
+    pub(super) fn set_progress(&self, received: u64, total: u64) {
+        self.total.store(total, Ordering::Release);
+        self.received.store(received, Ordering::Release);
+    }
+
+    /// Installs in `root` the release Obelisk wants there once it read
+    /// Voile's feed again, unless it or a manual development runtime is already
+    /// there, then automatically downloads and applies the Obelisk FX Linux
+    /// engine overlay into `Voile/current` when needed.
+    pub async fn run_with_overlay(
+        &self,
+        root: &Path,
+        prefixes: &Path,
+        archive: Option<&Path>,
+    ) -> Result<PathBuf, Failure> {
+        let base = self.run(root, archive).await?;
+        if archive.is_none() {
+            fx_overlay::install(root, prefixes, self).await?;
+        }
+        Ok(development(root).unwrap_or(base))
+    }
+
     /// Installs in `root` the release Obelisk wants there once it read
     /// Voile's feed again, unless it or a development runtime is already
     /// there. It keeps the releases it replaces: a game may run from one, and
@@ -394,7 +425,7 @@ impl Install {
         archive: Option<&Path>,
     ) -> Result<PathBuf, Failure> {
         let _installing = self.cancellable(INSTALLING.lock()).await?;
-        if let Some(development) = development(root) {
+        if let Some(development) = manual_development(root) {
             return Ok(development);
         }
         let destination = root.join(&release.version);
@@ -514,7 +545,7 @@ impl Install {
     }
 
     /// Stops waiting for `work` as soon as the install is cancelled.
-    async fn cancellable<T>(&self, work: impl Future<Output = T>) -> Result<T, Failure> {
+    pub(super) async fn cancellable<T>(&self, work: impl Future<Output = T>) -> Result<T, Failure> {
         self.cancel.race(work).await.map_err(|_| Failure::Cancelled)
     }
 }
@@ -536,6 +567,7 @@ pub fn remove_replaced(root: &Path) {
             && Some(name) != kept.as_deref()
             && name != feed::KEPT
             && name != feed::PRERELEASES
+            && name != fx_overlay::FEED_FILE
             && !name.starts_with(UNFINISHED)
     });
 }

@@ -290,7 +290,12 @@ struct Downloads(crate::Locations);
 impl RuntimeSource for Downloads {
     fn standing(&self, runtime: Runtime, voile: Option<&str>) -> Standing {
         match runtime {
-            Runtime::Voile => crate::voile::standing(&self.0.voile, voile),
+            Runtime::Voile => match crate::voile::standing(&self.0.voile, voile) {
+                Standing::Current if crate::voile::fx_overlay::needs_install(&self.0.voile) => {
+                    Standing::Missing
+                }
+                other => other,
+            },
             Runtime::SteamComponents => {
                 match crate::valve::installed(&self.0.steam_runtime_package) {
                     true => Standing::Current,
@@ -301,9 +306,10 @@ impl RuntimeSource for Downloads {
     }
     fn download(&self, runtime: Runtime) -> Arc<dyn RuntimeDownload> {
         match runtime {
-            Runtime::Voile => Arc::new(Download {
+            Runtime::Voile => Arc::new(VoileDownload {
                 install: crate::voile::Install::new(),
-                path: self.0.voile.clone(),
+                voile: self.0.voile.clone(),
+                prefixes: self.0.wine_prefixes.clone(),
             }),
             Runtime::SteamComponents => Arc::new(Download {
                 install: crate::valve::Install::new(),
@@ -315,6 +321,7 @@ impl RuntimeSource for Downloads {
         Box::pin(async move {
             tokio::join!(
                 crate::voile::refresh(&self.0.voile),
+                crate::voile::fx_overlay::refresh(&self.0.voile),
                 crate::profile::refresh(&self.0.library),
             );
         })
@@ -324,13 +331,14 @@ impl RuntimeSource for Downloads {
     }
 }
 
-/// One runtime's install into `path`.
-struct Download<I> {
-    install: I,
-    path: PathBuf,
+/// Voile runtime + automatic Obelisk FX overlay install.
+struct VoileDownload {
+    install: crate::voile::Install,
+    voile: PathBuf,
+    prefixes: PathBuf,
 }
 
-impl RuntimeDownload for Download<crate::voile::Install> {
+impl RuntimeDownload for VoileDownload {
     fn progress(&self) -> (u64, u64) {
         self.install.progress()
     }
@@ -341,12 +349,18 @@ impl RuntimeDownload for Download<crate::voile::Install> {
         Box::pin(async move {
             let archive = development_archive();
             self.install
-                .run(&self.path, archive.as_deref())
+                .run_with_overlay(&self.voile, &self.prefixes, archive.as_deref())
                 .await
                 .map(drop)
                 .map_err(Into::into)
         })
     }
+}
+
+/// One runtime's install into `path`.
+struct Download<I> {
+    install: I,
+    path: PathBuf,
 }
 
 impl RuntimeDownload for Download<crate::valve::Install> {
