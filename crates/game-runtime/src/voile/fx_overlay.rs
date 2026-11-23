@@ -45,6 +45,8 @@ pub(crate) struct OverlayRelease {
     pub libvirglrenderer: Option<OverlayAsset>,
     #[serde(default)]
     pub neptune_windows: Option<OverlayAsset>,
+    #[serde(default)]
+    pub gst_rtsp_root: Option<OverlayAsset>,
     pub wine_media_clipboard: Option<OverlayAsset>,
 }
 
@@ -54,14 +56,14 @@ struct OverlayStamp {
     base_voile: String,
 }
 
-/// Built-in pinned fallback for `v0.1.4-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.5-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.4-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.5-metalfx";
     OverlayRelease {
-        tag: "v0.1.4-metalfx".into(),
+        tag: "v0.1.5-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
             size: 231_504,
@@ -87,10 +89,15 @@ fn built_in() -> OverlayRelease {
             size: 1_631_643,
             sha256: "9e2044e95a497403ee95ded4fb7fe16c037d0f6d4aafe36fe47ab48253456ef0".into(),
         }),
+        gst_rtsp_root: Some(OverlayAsset {
+            url: format!("{BASE}/gst-rtsp-root-x86_64.tar.gz"),
+            size: 1_401_960,
+            sha256: "18b43c40335c67d4046500e277b683846261e22c283fbd0eedae693d4783590f".into(),
+        }),
         wine_media_clipboard: Some(OverlayAsset {
             url: format!("{BASE}/wine-media-clipboard-x86_64.tar.gz"),
-            size: 4_958_379,
-            sha256: "031761c31b8ca56e8bb289e935b0147b354e81771c5d36192821da5107d8f736".into(),
+            size: 5_308_528,
+            sha256: "3953604036374aaa8aa0b24c8232ef6d12ee1892d2f75e66006f5a2b2c76a27a".into(),
         }),
     }
 }
@@ -154,6 +161,7 @@ fn is_valid_release(rel: &OverlayRelease) -> bool {
         && rel.virgl_render_server.as_ref().is_none_or(is_valid_asset)
         && rel.libvirglrenderer.as_ref().is_none_or(is_valid_asset)
         && rel.neptune_windows.as_ref().is_none_or(is_valid_asset)
+        && rel.gst_rtsp_root.as_ref().is_none_or(is_valid_asset)
         && rel.wine_media_clipboard.as_ref().is_none_or(is_valid_asset)
 }
 
@@ -250,6 +258,8 @@ pub(crate) async fn refresh(voile_root: &Path) {
         resolve_asset(&client, &gh.assets, "libvirglrenderer.1.dylib-arm64").await;
     let neptune_windows =
         resolve_asset(&client, &gh.assets, "neptune-windows-x86_64.tar.gz").await;
+    let gst_rtsp_root =
+        resolve_asset(&client, &gh.assets, "gst-rtsp-root-x86_64.tar.gz").await;
     let wine_media_clipboard =
         resolve_asset(&client, &gh.assets, "wine-media-clipboard-x86_64.tar.gz").await;
 
@@ -260,6 +270,7 @@ pub(crate) async fn refresh(voile_root: &Path) {
         virgl_render_server,
         libvirglrenderer,
         neptune_windows,
+        gst_rtsp_root,
         wine_media_clipboard,
     };
     if !is_valid_release(&release) {
@@ -359,7 +370,9 @@ pub(crate) async fn install(
         && overlay.libvirglrenderer.is_some();
     let want_neptune_windows =
         neptune_ok && base_dir.join("linux/windows").is_dir() && overlay.neptune_windows.is_some();
-    let want_wine = has_compatible_wine_ffmpeg(&base_dir) && overlay.wine_media_clipboard.is_some();
+    let wine_compat = has_compatible_wine_ffmpeg(&base_dir);
+    let want_gst_root = wine_compat && overlay.gst_rtsp_root.is_some();
+    let want_wine = wine_compat && overlay.wine_media_clipboard.is_some();
 
     let mut total = overlay.wsd.size;
     if let Some(a) = &overlay.fexdarwin_run {
@@ -371,6 +384,9 @@ pub(crate) async fn install(
     }
     if want_neptune_windows {
         total += overlay.neptune_windows.as_ref().unwrap().size;
+    }
+    if want_gst_root {
+        total += overlay.gst_rtsp_root.as_ref().unwrap().size;
     }
     if want_wine {
         total += overlay.wine_media_clipboard.as_ref().unwrap().size;
@@ -386,6 +402,7 @@ pub(crate) async fn install(
         &overlay,
         want_neptune,
         want_neptune_windows,
+        want_gst_root,
         want_wine,
         work.path(),
         progress,
@@ -425,6 +442,7 @@ struct DownloadedFiles {
     virgl_render_server: Option<PathBuf>,
     libvirglrenderer: Option<PathBuf>,
     neptune_windows: Option<PathBuf>,
+    gst_rtsp_root: Option<PathBuf>,
     wine_media_clipboard: Option<PathBuf>,
 }
 
@@ -433,6 +451,7 @@ async fn download_all(
     overlay: &OverlayRelease,
     want_neptune: bool,
     want_neptune_windows: bool,
+    want_gst_root: bool,
     want_wine: bool,
     dir: &Path,
     progress: &Install,
@@ -495,6 +514,22 @@ async fn download_all(
     } else {
         None
     };
+    let gst_rtsp_root = if want_gst_root {
+        Some(
+            download_asset(
+                &client,
+                overlay.gst_rtsp_root.as_ref().unwrap(),
+                dir,
+                "gst-rtsp-root.tar.gz",
+                progress,
+                received,
+                total,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
     let wine_media_clipboard = if want_wine {
         Some(
             download_asset(
@@ -518,6 +553,7 @@ async fn download_all(
         virgl_render_server,
         libvirglrenderer,
         neptune_windows,
+        gst_rtsp_root,
         wine_media_clipboard,
     })
 }
@@ -667,6 +703,35 @@ fn apply_staged_inner(
         fs::create_dir_all(&win_dst)?;
         copy_dir_files(unpack.path(), &win_dst);
     }
+    if let Some(tarball) = &files.gst_rtsp_root {
+        let unpack = tempfile::Builder::new()
+            .prefix(UNFINISHED)
+            .tempdir_in(voile_root)?;
+        let status = std::process::Command::new("/usr/bin/tar")
+            .arg("-xzf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(unpack.path())
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err(Failure::Damaged);
+        }
+        let root_dst = staged.join("linux/root");
+        run_cmd("/usr/bin/ditto", &[unpack.path(), &root_dst])?;
+        // Bump mtimes on plugins that dlopen libsoup-3.0.so.0 so any cached GStreamer
+        // registry re-probes them immediately.
+        for plugin in ["libgstsoup.so", "libgstadaptivedemux2.so"] {
+            let p = root_dst
+                .join("usr/lib/x86_64-linux-gnu/gstreamer-1.0")
+                .join(plugin);
+            if p.is_file() {
+                let _ = std::process::Command::new("/usr/bin/touch").arg(&p).status();
+            }
+        }
+    }
 
     let mut unpacked_wine: Option<tempfile::TempDir> = None;
     if let Some(tarball) = &files.wine_media_clipboard {
@@ -741,6 +806,17 @@ fn sync_linux_prefixes(prefixes_root: &Path, wine_pack: &Path) {
         if !name.to_string_lossy().ends_with("-linux") {
             continue;
         }
+        // Clear any stale GStreamer plugin registry cache so newly added libsoup/TLS/plugins are probed.
+        let gst_cache = entry.path().join(".cache/gstreamer-1.0");
+        if let Ok(cache_entries) = fs::read_dir(&gst_cache) {
+            for cache_file in cache_entries.flatten() {
+                let fname = cache_file.file_name();
+                let s = fname.to_string_lossy();
+                if s.starts_with("registry") && s.ends_with(".bin") {
+                    let _ = fs::remove_file(cache_file.path());
+                }
+            }
+        }
         let prefix = entry.path().join("prefix");
         let sys32 = prefix.join("drive_c/windows/system32");
         if sys32.is_dir() {
@@ -803,8 +879,9 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.4-metalfx");
+        assert_eq!(rel.tag, "v0.1.5-metalfx");
         assert!(rel.neptune_windows.is_some());
+        assert!(rel.gst_rtsp_root.is_some());
     }
 
     #[test]
@@ -900,15 +977,36 @@ mod tests {
             .unwrap();
         assert!(status.success());
 
+        let gst_cache = prefixes.join("steam-438100-windows-linux/.cache/gstreamer-1.0");
+        fs::create_dir_all(&gst_cache).unwrap();
+        let stale_reg = gst_cache.join("registry.x86_64.bin");
+        fs::write(&stale_reg, "stale").unwrap();
+
+        // Build a tiny fake gst-rtsp-root tarball.
+        let gst_src = tmp.path().join("gst-src");
+        fs::create_dir_all(gst_src.join("usr/lib/x86_64-linux-gnu/gio/modules")).unwrap();
+        fs::write(
+            gst_src.join("usr/lib/x86_64-linux-gnu/gio/modules/libgiognutls.so"),
+            "tls",
+        )
+        .unwrap();
+        let gst_tarball = dl.join("gst-rtsp-root.tar.gz");
+        let status = std::process::Command::new("/usr/bin/tar")
+            .args(["-czf", gst_tarball.to_str().unwrap(), "-C", gst_src.to_str().unwrap(), "."])
+            .status()
+            .unwrap();
+        assert!(status.success());
+
         let files = DownloadedFiles {
             wsd,
             fexdarwin_run: Some(fex),
             virgl_render_server: None,
             libvirglrenderer: None,
             neptune_windows: Some(npt_tarball),
+            gst_rtsp_root: Some(gst_tarball),
             wine_media_clipboard: Some(tarball),
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.4-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.5-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(
@@ -923,6 +1021,14 @@ mod tests {
             fs::read_to_string(root.join("current/linux/windows/d3d11.dll")).unwrap(),
             "neptune-d3d11"
         );
+        assert_eq!(
+            fs::read_to_string(
+                root.join("current/linux/root/usr/lib/x86_64-linux-gnu/gio/modules/libgiognutls.so")
+            )
+            .unwrap(),
+            "tls"
+        );
+        assert!(!stale_reg.exists());
         assert_eq!(
             fs::read_to_string(root.join("current/linux/wine/lib/wine/x86_64-windows/winedmo.dll"))
                 .unwrap(),
