@@ -19,17 +19,23 @@ source "$PROJECT_ROOT/scripts/version.sh"
 # The tools of the Sparkle that apps/macos/project.yml pins.
 SPARKLE_VERSION=2.10.0
 SPARKLE_SHA256=c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+LOCAL_SIGN_UPDATE="$PROJECT_ROOT/build/xcode/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
 TOOLS="$PROJECT_ROOT/build/sparkle-$SPARKLE_VERSION"
-if [[ ! -x "$TOOLS/bin/sign_update" ]]; then
-    mkdir -p "$TOOLS"
-    curl -fsSL --retry 3 -o "$TOOLS.tar.xz.partial" \
-        "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
-    if [[ "$(shasum -a 256 "$TOOLS.tar.xz.partial" | cut -d' ' -f1)" != "$SPARKLE_SHA256" ]]; then
-        echo "Sparkle $SPARKLE_VERSION checksum mismatch." >&2
-        exit 1
+if [[ -x "$LOCAL_SIGN_UPDATE" ]]; then
+    SIGN_UPDATE="$LOCAL_SIGN_UPDATE"
+else
+    if [[ ! -x "$TOOLS/bin/sign_update" ]]; then
+        mkdir -p "$TOOLS"
+        curl -fsSL --retry 3 -o "$TOOLS.tar.xz.partial" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+        if [[ "$(shasum -a 256 "$TOOLS.tar.xz.partial" | cut -d' ' -f1)" != "$SPARKLE_SHA256" ]]; then
+            echo "Sparkle $SPARKLE_VERSION checksum mismatch." >&2
+            exit 1
+        fi
+        tar -xJf "$TOOLS.tar.xz.partial" -C "$TOOLS" ./bin/sign_update
+        rm "$TOOLS.tar.xz.partial"
     fi
-    tar -xJf "$TOOLS.tar.xz.partial" -C "$TOOLS" ./bin/sign_update
-    rm "$TOOLS.tar.xz.partial"
+    SIGN_UPDATE="$TOOLS/bin/sign_update"
 fi
 
 WORK="$(mktemp -d)"
@@ -75,14 +81,14 @@ item() {
 
     local signature
     if [[ -n "${SPARKLE_ED_PRIVATE_KEY:-}" ]]; then
-        signature="$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$TOOLS/bin/sign_update" --ed-key-file - -p "$dmg")"
+        signature="$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$SIGN_UPDATE" --ed-key-file - -p "$dmg")"
     else
-        signature="$("$TOOLS/bin/sign_update" --account zagrios -p "$dmg")"
+        signature="$("$SIGN_UPDATE" --account "${SPARKLE_KEYCHAIN_ACCOUNT:-obelisk-fx}" -p "$dmg")"
     fi
 
     cat <<EOF
     <item>
-      <title>Obelisk $short_version</title>
+      <title>Obelisk FX $short_version</title>
       <pubDate>$(LC_ALL=C date -j -u -f '%Y-%m-%dT%H:%M:%SZ' "$published" '+%a, %d %b %Y %H:%M:%S +0000')</pubDate>
       <sparkle:version>$version</sparkle:version>
       <sparkle:shortVersionString>$short_version</sparkle:shortVersionString>
@@ -121,7 +127,7 @@ done <<<"$TAGS"
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Obelisk</title>
+    <title>Obelisk FX</title>
 EOF
     item "$LATEST" ""
     if [[ -n "$PRERELEASE" ]]; then

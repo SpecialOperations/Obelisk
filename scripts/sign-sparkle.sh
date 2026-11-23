@@ -4,12 +4,18 @@ set -euo pipefail
 # sit in. Notarization wants every one signed with Obelisk's identity and the
 # hardened runtime, innermost first, then the framework that seals them.
 SPARKLE="$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Sparkle.framework"
-IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:?A stable Apple signing identity is required}"
-# Notarization needs a secure timestamp; Debug skips the round trip to Apple.
-if [[ "${CONFIGURATION:-Debug}" == Release ]]; then TIMESTAMP=--timestamp; else TIMESTAMP=--timestamp=none; fi
-sign() {
-    /usr/bin/codesign --force --sign "$IDENTITY" "$TIMESTAMP" --options runtime "$@"
-}
+IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY:--}}"
+if [[ "$IDENTITY" == "-" ]]; then
+    sign() {
+        /usr/bin/codesign --force --sign - --timestamp=none "$@"
+    }
+else
+    # Notarization needs a secure timestamp; Debug skips the round trip to Apple.
+    if [[ "${CONFIGURATION:-Debug}" == Release ]]; then TIMESTAMP=--timestamp; else TIMESTAMP=--timestamp=none; fi
+    sign() {
+        /usr/bin/codesign --force --sign "$IDENTITY" "$TIMESTAMP" --options runtime "$@"
+    }
+fi
 sign "$SPARKLE/Versions/B/XPCServices/Installer.xpc"
 sign --preserve-metadata=entitlements "$SPARKLE/Versions/B/XPCServices/Downloader.xpc"
 sign "$SPARKLE/Versions/B/Autoupdate"

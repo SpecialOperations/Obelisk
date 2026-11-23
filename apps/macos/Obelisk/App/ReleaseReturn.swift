@@ -176,7 +176,8 @@ enum ReleaseReturn {
     }
 
     /// Whether `app` is this Obelisk's `version`, validly signed with
-    /// Obelisk's own designated requirement.
+    /// Obelisk's own designated requirement (or validly signed on ad-hoc fork
+    /// builds, where the DMG's EdDSA signature already authenticated the update).
     private static func holds(_ app: URL, version: String) -> Bool {
         guard let info = NSDictionary(contentsOf: app.appending(path: "Contents/Info.plist")),
               info["CFBundleIdentifier"] as? String == Bundle.main.bundleIdentifier,
@@ -188,10 +189,19 @@ enum ReleaseReturn {
         var code: SecStaticCode?
         guard SecCodeCopySelf([], &running) == errSecSuccess, let running,
               SecCodeCopyStaticCode(running, [], &runningStatic) == errSecSuccess, let runningStatic,
-              SecCodeCopyDesignatedRequirement(runningStatic, [], &requirement) == errSecSuccess, let requirement,
               SecStaticCodeCreateWithPath(app as CFURL, [], &code) == errSecSuccess, let code
         else { return false }
         let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate)
+        // Ad-hoc signed builds have a per-binary cdhash designated requirement that can never match another build.
+        var signingInfo: CFDictionary?
+        if SecCodeCopySigningInformation(runningStatic, SecCSFlags(rawValue: kSecCSSigningInformation), &signingInfo) == errSecSuccess,
+           let dict = signingInfo as? [String: Any],
+           let codeFlags = dict[kSecCodeInfoFlags as String] as? UInt32,
+           (codeFlags & SecCodeSignatureFlags.adhoc.rawValue) != 0 {
+            return SecStaticCodeCheckValidity(code, flags, nil) == errSecSuccess
+        }
+        guard SecCodeCopyDesignatedRequirement(runningStatic, [], &requirement) == errSecSuccess, let requirement
+        else { return false }
         return SecStaticCodeCheckValidity(code, flags, requirement) == errSecSuccess
     }
 

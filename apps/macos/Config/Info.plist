@@ -10,10 +10,10 @@
 	<key>SUFeedURL</key>
 	<string>https://github.com/SpecialOperations/Obelisk/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>pBrOTkfrxqlCTkKhDfXsiULL9PfDFBGGKsNn5uhsUdM=</string>
+	<string>fZjrLaIg9Jc3dicAAvPzFCtGod9282ZEocjawTfI67c=</string>
 	<key>SUEnableAutomaticChecks</key>
-	<false/>
+	<true/>
 	<key>SUAutomaticallyUpdate</key>
-	<false/>
+	<true/>
 </dict>
 </plist>
