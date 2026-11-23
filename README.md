@@ -5,7 +5,7 @@
   <h1>Obelisk FX</h1>
   <p>
     VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, native clipboard sync, and in-game video/media playback fixes for the Linux engine.
+    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, native clipboard sync, VRChat stability fixes, and in-game video playback fixes for the Linux engine.
   </p>
   <p>
     <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Obelisk FX</b></a>
@@ -24,7 +24,7 @@
   </p>
 </div>
 
-> **Fork notice:** **Obelisk FX** is an independent community fork of [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) (all credit for Obelisk and Voile goes to Zagrios). Please report any bugs, crashes, or questions about Obelisk FX on **[SpecialOperations/Obelisk/issues](https://github.com/SpecialOperations/Obelisk/issues)** rather than to the upstream maintainer or upstream Discord.
+> **Fork notice:** **Obelisk FX** is an independent community fork of [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) (all credit for Obelisk and Voile goes to Zagrios and the project's contributors). Please report any bugs, crashes, or questions about Obelisk FX on **[SpecialOperations/Obelisk/issues](https://github.com/SpecialOperations/Obelisk/issues)** rather than to the upstream maintainer or upstream Discord.
 
 <p align="center">
   <a href="https://github.com/SpecialOperations/Obelisk"><img src="assets/readme/macbook.png" alt="Obelisk FX's Home on a MacBook Pro: Rocket League, the recently played games and the games installed on this Mac" width="800"></a>
@@ -37,7 +37,7 @@
 - **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings** (off by default; recommended when using your device's speakers and built-in mic). Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
 - **Native Bidirectional Clipboard Sync** (Linux engine): Seamlessly copy and paste between macOS and Windows games (including in-game paste buttons and `Cmd+C/V/X/A`) via native clipboard synchronization between `wsd` and `wineobelisk.drv`.
 - **In-Game Video & Media Playback** (Linux engine): Full Proton-GE FFmpeg-backed Media Foundation playback (`winedmo` / `mfmediaengine`) and same-process D3D11 shared texture support in Neptune so in-world/in-game video players (such as VRChat video players) play video and audio reliably.
-- **Linux-engine stability & polish** (via the companion [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd), [SpecialOperations/neptune](https://github.com/SpecialOperations/neptune), and [SpecialOperations/voile-wine](https://github.com/SpecialOperations/voile-wine) forks):
+- **Linux-engine stability & polish** (via the companion [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd), [SpecialOperations/neptune](https://github.com/SpecialOperations/neptune), and [SpecialOperations/voile-wine](https://github.com/SpecialOperations/voile-wine) forks). This fixes many VRChat crashes:
   - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
   - Fixes for intermittent emulation crashes and deadlocks during heavy scene loads, garbage-collection thread suspension, and rapid ptrace attach/detach churn.
   - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
