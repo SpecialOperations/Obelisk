@@ -234,6 +234,7 @@ Obelisk has no account of its own and does not track what you do in it. It talks
 
 ## Known limitations
 
+- SteamVR mode is not implemented
 - Only games you own through Steam, Epic Games or GOG appear. Adding other games by hand is not supported yet.
 - Games install in Obelisk's library folder, shown in **Settings → Storage**. Another location cannot be chosen yet.
 - Steam: Workshop content and beta branches are not available yet.
