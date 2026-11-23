@@ -4,7 +4,7 @@
   <img src="assets/readme/icon.png" alt="Obelisk FX icon" width="200" height="200">
   <h1>Obelisk FX</h1>
   <p>
-    VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
+    Play Windows PC games on your Mac without a SteamOS virtual machine! VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
     Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, native clipboard sync, VRChat stability fixes, and in-game video playback fixes for the Linux engine.
   </p>
   <p>
