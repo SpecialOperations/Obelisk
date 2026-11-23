@@ -34,10 +34,11 @@ struct AccountSlot: Hashable, Sendable, Identifiable {
     var suffix: String { name.isEmpty ? "" : "-" + name }
 }
 
-/// What the sidebar shows: Home, one storefront account's library, or Settings.
+/// What the sidebar shows: Home, one storefront account's library, Custom, or Settings.
 enum LibraryTab: Hashable, Sendable {
     case home
     case account(AccountSlot)
+    case custom
     case settings
 
     /// The tab's section: its account's storefront, or Obelisk's own.
@@ -45,6 +46,7 @@ enum LibraryTab: Hashable, Sendable {
         switch self {
         case .home: .home
         case .account(let slot): slot.section
+        case .custom: .custom
         case .settings: .settings
         }
     }

@@ -1,11 +1,12 @@
 //! Obelisk FX automatic Linux-engine runtime overlay.
 //!
 //! Instead of requiring users to run a terminal script after installing
-//! Obelisk FX, this module fetches the ~12 MB runtime overlay published on
+//! Obelisk FX, this module fetches the runtime overlay published on
 //! `SpecialOperations/voile-lkd` (MetalFX Spatial + 2× Frame Generation +
-//! Mic Voice Isolation + native clipboard sync `wsd`, patched `fexdarwin-run`,
-//! Neptune 512 MiB / shared-texture server, and Proton-GE FFmpeg 7.1 Wine
-//! media + clipboard DLLs), verifies SHA-256 checksums and Mach-O code
+//! Mic Voice Isolation + native clipboard sync + native macOS Full Screen `wsd`,
+//! patched `fexdarwin-run`, Neptune 512 MiB / shared-texture / coalescing SHM
+//! server & guest DLLs, and Proton-RTSP 11.0 + GStreamer 1.26.2 Wine media +
+//! clipboard pack), verifies SHA-256 checksums and Mach-O code
 //! signatures, clones the newest installed upstream Voile into `Voile/current`
 //! using APFS copy-on-write, applies the overlay, and syncs updated DLLs into
 //! existing Linux prefixes.
@@ -56,18 +57,18 @@ struct OverlayStamp {
     base_voile: String,
 }
 
-/// Built-in pinned fallback for `v0.1.5-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.6-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.5-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.6-metalfx";
     OverlayRelease {
-        tag: "v0.1.5-metalfx".into(),
+        tag: "v0.1.6-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
-            size: 231_504,
-            sha256: "45ed23d845c6b286897fb5d74f0a8823726454fea9b8f0f090318d7b7209f097".into(),
+            size: 249_568,
+            sha256: "b6b8287231c85c9c373986afa979af68c8325a2c02c35c68bffd5005c7212d92".into(),
         },
         fexdarwin_run: Some(OverlayAsset {
             url: format!("{BASE}/fexdarwin-run-arm64"),
@@ -96,8 +97,8 @@ fn built_in() -> OverlayRelease {
         }),
         wine_media_clipboard: Some(OverlayAsset {
             url: format!("{BASE}/wine-media-clipboard-x86_64.tar.gz"),
-            size: 5_308_528,
-            sha256: "3953604036374aaa8aa0b24c8232ef6d12ee1892d2f75e66006f5a2b2c76a27a".into(),
+            size: 5_300_072,
+            sha256: "ad5b05bd8870694b249741ae56d0db839a35e52569ca658543509ae62d897958".into(),
         }),
     }
 }
@@ -879,7 +880,7 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.5-metalfx");
+        assert_eq!(rel.tag, "v0.1.6-metalfx");
         assert!(rel.neptune_windows.is_some());
         assert!(rel.gst_rtsp_root.is_some());
     }
@@ -1006,7 +1007,7 @@ mod tests {
             gst_rtsp_root: Some(gst_tarball),
             wine_media_clipboard: Some(tarball),
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.5-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.6-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(

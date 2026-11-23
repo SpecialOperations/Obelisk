@@ -17,6 +17,7 @@ final class AppModel {
     let steam: AccountList<SteamModel>
     let epic: AccountList<EpicModel>
     let gog: AccountList<GogModel>
+    let custom: CustomGamesModel
     /// The in-game overlay, over whichever storefront's game runs.
     let overlay: GameOverlayController
     /// Tells every Steam account's invitations while no game shows the overlay.
@@ -91,6 +92,7 @@ final class AppModel {
          defaultsDomain: String = Bundle.main.bundleIdentifier ?? AppIdentity.storageIdentifier, steam: SteamModel? = nil,
          epic: EpicModel? = nil, gog: GogModel? = nil,
          makeEpic: (@MainActor (AccountSlot) -> EpicModel)? = nil,
+         custom: CustomGamesModel? = nil,
          downloads: DownloadsModel? = nil,
          gamesFolder: GamesFolderModel? = nil,
          performance: PerformanceReports? = nil, estimates: PerformanceEstimates? = nil, updates: AppUpdates? = nil,
@@ -126,6 +128,7 @@ final class AppModel {
         self.gog = AccountList(.gog, first: gog, defaults: defaults) { slot in
             GogModel(directory: directory, slot: slot, gameSessions: gogSessions, libraryCache: libraryCache)
         }
+        self.custom = custom ?? CustomGamesModel(directory: directory)
         restoringAccounts = Set(self.steam.accounts.map(\.slot) + self.epic.accounts.map(\.slot)
             + self.gog.accounts.map(\.slot))
         self.overlay = GameOverlayController(steam: self.steam, epic: self.epic, gog: self.gog, defaults: defaults,
@@ -216,13 +219,24 @@ final class AppModel {
         switch tab {
         case .home: closeHomeGame()
         case .account(let slot): closeGame(of: slot)
+        case .custom: closeCustomGame()
         case .settings: break
         }
     }
 
     /// Returns Home from the game page it opened.
     func closeHomeGame() {
-        if let slot = homeGame?.slot { closeGame(of: slot) }
+        if homeGame?.section == .custom {
+            closeCustomGame()
+        } else if let slot = homeGame?.slot {
+            closeGame(of: slot)
+        }
+    }
+
+    /// Returns Custom from its game page, which Home shows too when it opened it.
+    private func closeCustomGame() {
+        custom.selectedGame = nil
+        if homeGame?.section == .custom { homeGame = nil }
     }
 
     /// Returns an account from its game page, which Home shows too when it
@@ -259,7 +273,7 @@ final class AppModel {
         case .steam: steam
         case .epic: epic
         case .gog: gog
-        case .home, .settings: nil
+        case .home, .settings, .custom: nil
         }
     }
 
@@ -359,7 +373,7 @@ final class AppModel {
     enum HomeContent: Equatable { case libraries, restoring, signIn }
 
     var homeContent: HomeContent {
-        if accounts.contains(where: { $0.showsLibrary }) { return .libraries }
+        if accounts.contains(where: { $0.showsLibrary }) || !custom.games.isEmpty { return .libraries }
         return restoringAccounts.isEmpty ? .signIn : .restoring
     }
 
@@ -496,7 +510,7 @@ final class AppModel {
     func refresh() {
         switch selection {
         case .home: for account in accounts { account.refresh() }
-        case .settings: break
+        case .custom, .settings: break
         case .account(let slot): account(slot)?.refresh()
         }
     }

@@ -5,7 +5,7 @@
   <h1>Obelisk FX</h1>
   <p>
     VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, native clipboard sync, VRChat stability fixes, and in-game video playback fixes for the Linux engine.
+    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime & app updates.
   </p>
   <p>
     <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Obelisk FX</b></a>
@@ -32,12 +32,16 @@
 
 ## Obelisk FX Features & Improvements
 
-- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
+- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 45%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
 - **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
 - **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings** (off by default; recommended when using your device's speakers and built-in mic). Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
+- **Proton-RTSP 11.0 Media & Livestream Playback** (Linux engine): Upgraded Media Foundation / `winegstreamer` stack based on [SpookySkeletons/proton-rtsp](https://github.com/SpookySkeletons/proton-rtsp) (`proton-rtsp-11.0`) paired with bundled GStreamer 1.26.2 plugins (`libsoup-3.0`, GnuTLS TLS, HLS, RTMP/RTMP2, SRT, MPEG-TS, AV1, HEVC) and same-process D3D11 shared textures in Neptune — enabling YouTube videos, YouTube livestreams, Twitch streams, RTSP, and MPEG-TS playback inside VRChat and other games.
+- **Native macOS Full Screen Support** (Linux engine): Titled, resizable game windows (such as VRChat) can enter and exit native macOS Full Screen Spaces via the green traffic-light button, **`⌃⌘F`**, or **Window → Enter Full Screen**, resizing the swapchain and MetalFX pipeline cleanly while keeping Option-click Zoom and game-managed exclusive fullscreen working.
 - **Native Bidirectional Clipboard Sync** (Linux engine): Seamlessly copy and paste between macOS and Windows games (including in-game paste buttons and `Cmd+C/V/X/A`) via native clipboard synchronization between `wsd` and `wineobelisk.drv`.
-- **In-Game Video & Media Playback** (Linux engine): Full Proton-GE FFmpeg-backed Media Foundation playback (`winedmo` / `mfmediaengine`) and same-process D3D11 shared texture support in Neptune so in-world/in-game video players (such as VRChat video players) play video and audio reliably.
-- **Linux-engine stability & polish** (via the companion [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd), [SpecialOperations/neptune](https://github.com/SpecialOperations/neptune), and [SpecialOperations/voile-wine](https://github.com/SpecialOperations/voile-wine) forks). This fixes many VRChat crashes:
+- **Custom Games & Artwork Cropper** ([Zagrios/Obelisk#76](https://github.com/Zagrios/Obelisk/pull/76) by [@thatonemacosdev](https://github.com/thatonemacosdev)): Dedicated **Custom** library section for standalone Windows `.exe` binaries, native Linux ELF executables/scripts, and macOS `.app` bundles with automatic engine/graphics detection and an interactive cover/banner artwork cropper.
+- **Automatic Runtime Overlay & Sparkle Auto-Updates**: Automatically downloads, verifies, and applies the Obelisk FX Linux-engine overlay (runtime binaries, Neptune DLLs, Proton-RTSP media stack, and GStreamer plugins) with zero terminal commands, plus in-app **Check for Updates…** via Sparkle.
+- **Memory & Stability Fixes** (via the companion [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd), [SpecialOperations/neptune](https://github.com/SpecialOperations/neptune), and [SpecialOperations/voile-wine](https://github.com/SpecialOperations/voile-wine) forks):
+  - **Bounded memory across world hops & long sessions**: Replaced Neptune's bump-only SHM allocator with a coalescing free-list slab allocator and steady-state upload ring shrinking, switched FEX to a single demand-paged 512 MiB `MAP_JIT` code buffer with immediate stale-buffer migration and dead-thread reaping, and wired Linux `MADV_FREE` in LKD to macOS `madvise(MADV_FREE)`.
   - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
   - Fixes for intermittent emulation crashes and deadlocks during heavy scene loads, garbage-collection thread suspension, and rapid ptrace attach/detach churn.
   - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
@@ -50,6 +54,7 @@
 - [Getting started](#getting-started)
 - [Features](#features)
 - [Store support](#store-support)
+- [Custom games (Windows, Linux & Mac)](#custom-games-windows-linux--mac)
 - [Windows games](#windows-games)
 - [Performance](#performance)
 - [How games run](#how-games-run)
@@ -157,18 +162,30 @@ Gamepads work in Windows games, which see them as Xbox controllers. Mac games us
 
 Some controllers, such as the Steam Controller, get full support once Obelisk is allowed in **System Settings → Privacy & Security → Input Monitoring**.
 
+### Custom games (Windows, Linux & Mac)
+
+Add standalone Windows, Linux or Mac games, emulators, fan games, DRM-free releases, itch.io downloads, or native Linux binaries (such as BeamNG Linux builds) directly into Obelisk:
+
+- **Manual executable management:** Browse for any Windows `.exe` or native Linux executable / script (`x86_64` ELF, shell scripts) to add and launch directly from your library.
+- **Mac apps:** Add a native Mac app (`.app`), such as a game's Mac port, optionally with a file for it to open, such as an emulator's game. macOS opens it as a double-click or Finder's **Open With** would, with its launch arguments, and it needs no Wine. The app must run natively on Apple silicon.
+- **Automatic engine & graphics detection:** Automatically detects Linux ELF binaries to launch with the Voile Linux engine (`voile-lkd` via FEX), or Windows binaries with CrossOver Wine / GPTK 4 and auto-configured DXMT or D3DMetal.
+- **Custom artwork & interactive crop:** Assign custom cover and banner artwork with a built-in cropping modal (`2:3 Cover` and `1:1 Square` presets, free mouse scroll wheel and pinch zoom, and 90° rotation).
+- **Runtime & graphics configuration:** Choose between CrossOver Wine / Apple GPTK 4 and the Voile Linux engine, select D3DMetal or DXMT, and configure Ray Tracing, Metal HUD, and render scaling.
+- **Process tracking:** Playtime accumulation and clean process management directly from the library card. A Mac app plays until every process it started has quit, such as the game its launcher starts.
+
 ## Store support
 
-|                           | Steam | Epic Games | GOG |
-| ------------------------- | :---: | :--------: | :-: |
-| Mac games                 |  ✅   |     ✅     | ✅  |
-| Windows games             |  ✅   |     ✅     | ✅  |
-| Automatic updates         |  ✅   |     ✅     | ✅  |
-| Cloud saves               |  ✅   |     ✅     | ❌  |
-| Achievements              |  ✅   |     ✅     | ✅  |
-| Friends list              |  ✅   |     ✅     | ❌  |
-| Chat and invitations      |  ✅   |     ❌ (in game)     | ❌ (in game)  |
-| In-game overlay           |  ✅   |     ✅     | ✅  |
+|                           | Steam | Epic Games | GOG | Custom |
+| ------------------------- | :---: | :--------: | :-: | :----: |
+| Mac games                 |  ✅   |     ✅     | ✅  |   ✅   |
+| Windows games             |  ✅   |     ✅     | ✅  |   ✅   |
+| Linux executables         |  ❌   |     ❌     | ❌  |   ✅   |
+| Automatic updates         |  ✅   |     ✅     | ✅  |   ❌   |
+| Cloud saves               |  ✅   |     ✅     | ❌  |   ❌   |
+| Achievements              |  ✅   |     ✅     | ✅  |   ❌   |
+| Friends list              |  ✅   |     ✅     | ❌  |   ❌   |
+| Chat and invitations      |  ✅   |     ❌ (in game)     | ❌ (in game)  |   ❌   |
+| In-game overlay           |  ✅   |     ✅     | ✅  |   ✅   |
 
 Support for more stores is planned in the near future.
 
@@ -235,7 +252,7 @@ Obelisk has no account of its own and does not track what you do in it. It talks
 ## Known limitations
 
 - SteamVR mode is not implemented
-- Only games you own through Steam, Epic Games or GOG appear. Adding other games by hand is not supported yet.
+- Adding custom Windows and Linux games (`.exe` or ELF binaries) and Mac apps (`.app`) is supported via the **Custom** section.
 - Games install in Obelisk's library folder, shown in **Settings → Storage**. Another location cannot be chosen yet.
 - Steam: Workshop content and beta branches are not available yet.
 - GOG: Cloud saves, friends and GOG Galaxy's online features are not available yet. Games only offered in GOG's older download format cannot be installed yet.
@@ -319,7 +336,7 @@ Enjoying Obelisk FX? Star [SpecialOperations/Obelisk](https://github.com/Special
 
 ## Credits
 
-Obelisk FX is a community fork maintained by [SpecialOperations](https://github.com/SpecialOperations), based on [Obelisk](https://github.com/Zagrios/Obelisk) by [Zagrios](https://github.com/Zagrios).
+Obelisk FX is a community fork maintained by [SpecialOperations](https://github.com/SpecialOperations), based on [Obelisk](https://github.com/Zagrios/Obelisk) by [Zagrios](https://github.com/Zagrios), with custom games support contributed by [thatonemacosdev](https://github.com/thatonemacosdev).
 
 It builds on the work of many open-source projects, without which Windows games could not run on a Mac:
 

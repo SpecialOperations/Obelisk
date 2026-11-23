@@ -21,13 +21,14 @@ struct HomeView: View {
 
     /// An account's game whose page Home opened.
     private enum OpenGame {
-        case steam(SteamModel, SteamGame), epic(EpicModel, EpicGame), gog(GogModel, GogGame)
+        case steam(SteamModel, SteamGame), epic(EpicModel, EpicGame), gog(GogModel, GogGame), custom(CustomGame)
 
         var title: String {
             switch self {
             case let .steam(_, game): game.name
             case let .epic(_, game): game.title
             case let .gog(_, game): game.title
+            case let .custom(game): game.title
             }
         }
 
@@ -36,6 +37,7 @@ struct HomeView: View {
             case let .steam(account, _): account.slot
             case let .epic(account, _): account.slot
             case let .gog(account, _): account.slot
+            case .custom: AccountSlot(.custom)
             }
         }
     }
@@ -50,6 +52,7 @@ struct HomeView: View {
         case .steam: return model.steam[id.slot].flatMap { account in opened(account.selectedGame).map { .steam(account, $0) } }
         case .epic: return model.epic[id.slot].flatMap { account in opened(account.selectedGame).map { .epic(account, $0) } }
         case .gog: return model.gog[id.slot].flatMap { account in opened(account.selectedGame).map { .gog(account, $0) } }
+        case .custom: return model.custom.games.first(where: { $0.id == id.game }).map(OpenGame.custom)
         default: return nil
         }
     }
@@ -69,6 +72,8 @@ struct HomeView: View {
         .errorAlert(L10n.string("ui.store.steam"), message: errorMessage(of: .steam))
         .errorAlert(L10n.string("ui.store.epic"), message: errorMessage(of: .epic))
         .errorAlert(L10n.string("ui.store.gog"), message: errorMessage(of: .gog))
+        // Home plays and opens games added by hand too.
+        .customGamePresentations(model.custom)
     }
 
     /// What an account of a storefront failed with, which its alert
@@ -98,7 +103,7 @@ struct HomeView: View {
         // An overlay rather than a safe area bar, as a library's.
         .overlay(alignment: .top) {
             HomeBar(model: model, bar: bar, game: openGame.map { ($0.title, $0.slot) }, back: back,
-                    openLibrary: { model.show(.account($0)) })
+                    openLibrary: { slot in model.show(slot.section == .custom ? .custom : .account(slot)) })
         }
         .environment(\.storefrontBar, bar)
         .environment(\.gameTransition, GameTransition(namespace: namespace, source: source, card: card))
@@ -122,6 +127,9 @@ struct HomeView: View {
                 heroArtwork: GogView.heroArtwork(game), cover: GogView.cover(game)
             ))
             .id(game.id)
+        case let .custom(game):
+            CustomGameDetailView(model: model.custom, game: game)
+                .id(game.id)
         }
     }
 
@@ -272,13 +280,14 @@ private struct HomePage: View {
             account.homeResults(matching: query, cover: GogView.cover, heroArtwork: GogView.heroArtwork,
                                 heroLogo: GogView.heroLogo)
         }
-        return LibraryOrder.merge(steam + epic + gog, title: \.title, rank: { _ in nil }).oncePerStorefront
+        let custom = [model.custom.homeResults(matching: query)]
+        return LibraryOrder.merge(steam + epic + gog + custom, title: \.title, rank: { _ in nil }).oncePerStorefront
     }
 
     var body: some View {
         let query = model.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let libraries = query.isEmpty ? homeLibraries : nil
-        let shelves = libraries.map { HomeShelves($0.map(\.library)) }
+        let shelves = libraries.map { HomeShelves($0.map(\.library) + [model.custom.homeLibrary()]) }
         let heroGame = shelves?.hero
         let backdropOffset = heroGame == nil ? 0 : ObeliskStyle.libraryHeroHeight
         return StorefrontScrollView {
