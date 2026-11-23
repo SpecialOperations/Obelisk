@@ -46856,49 +46856,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unterdrückt Lautsprecherecho und Hintergrundgeräusche über CoreAudio Voice Processing."
+            "value": "Unterdrückt Lautsprecherecho und Hintergrundgeräusche über CoreAudio Voice Processing. Empfohlen bei Verwendung der Gerätelautsprecher und des integrierten Mikrofons."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancels speaker echo and enables macOS Voice Isolation for the microphone."
+            "value": "Cancels speaker echo and enables macOS Voice Isolation for the microphone. Recommended when using your device’s speakers and built-in mic."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancela el eco de los altavoces y activa el aislamiento de voz de macOS para el micrófono."
+            "value": "Cancela el eco de los altavoces y activa el aislamiento de voz de macOS para el micrófono. Recomendado al usar los altavoces y el micrófono integrado del dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Annule l’écho des haut-parleurs et active l’isolement de la voix macOS pour le micro."
+            "value": "Annule l’écho des haut-parleurs et active l’isolement de la voix macOS pour le micro. Recommandé avec les haut-parleurs et le micro intégré de l’appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancella l’eco degli altoparlanti e attiva l’isolamento vocale di macOS per il microfono."
+            "value": "Cancella l’eco degli altoparlanti e attiva l’isolamento vocale di macOS per il microfono. Consigliato quando si usano gli altoparlanti e il microfono integrato del dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スピーカーのエコーを除去し、マイクで macOS の「声を分離」を有効にします。"
+            "value": "スピーカーのエコーを除去し、マイクで macOS の「声を分離」を有効にします。内蔵スピーカーと内蔵マイク使用時に推奨されます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cancela o eco dos alto-falantes e ativa o Isolamento de Voz do macOS no microfone."
+            "value": "Cancela o eco dos alto-falantes e ativa o Isolamento de Voz do macOS no microfone. Recomendado ao usar os alto-falantes e o microfone integrado do dispositivo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "消除扬声器回声并为麦克风启用 macOS 语音突显。"
+            "value": "消除扬声器回声并为麦克风启用 macOS 语音突显。使用设备扬声器和内置麦克风时建议开启。"
           }
         }
       }

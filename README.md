@@ -34,7 +34,7 @@
 
 - **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
 - **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
-- **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings**. Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
+- **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings** (off by default; recommended when using your device's speakers and built-in mic). Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
 - **Linux-engine stability & polish** (included automatically via the companion [voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) installer):
   - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
   - Fixes for intermittent emulation crashes and deadlocks during heavy scene loads, garbage-collection thread suspension, and rapid ptrace attach/detach churn.
