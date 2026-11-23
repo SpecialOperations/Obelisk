@@ -43,6 +43,8 @@ pub(crate) struct OverlayRelease {
     pub fexdarwin_run: Option<OverlayAsset>,
     pub virgl_render_server: Option<OverlayAsset>,
     pub libvirglrenderer: Option<OverlayAsset>,
+    #[serde(default)]
+    pub neptune_windows: Option<OverlayAsset>,
     pub wine_media_clipboard: Option<OverlayAsset>,
 }
 
@@ -52,14 +54,14 @@ struct OverlayStamp {
     base_voile: String,
 }
 
-/// Built-in pinned fallback for `v0.1.3-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.4-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.3-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.4-metalfx";
     OverlayRelease {
-        tag: "v0.1.3-metalfx".into(),
+        tag: "v0.1.4-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
             size: 231_504,
@@ -67,8 +69,8 @@ fn built_in() -> OverlayRelease {
         },
         fexdarwin_run: Some(OverlayAsset {
             url: format!("{BASE}/fexdarwin-run-arm64"),
-            size: 4_131_648,
-            sha256: "ea03dbd2488471d8d0aa486abb964046451e9497d6aa4beeda6f4b21d4b8d786".into(),
+            size: 4_131_696,
+            sha256: "846c34092ad1fcb587701785404c70cf213a28581b4d439c57b7e7ea5ea3e3f8".into(),
         }),
         virgl_render_server: Some(OverlayAsset {
             url: format!("{BASE}/virgl_render_server-arm64"),
@@ -80,12 +82,25 @@ fn built_in() -> OverlayRelease {
             size: 2_066_464,
             sha256: "6c482e83d45da214d8951a216b125d01c14e3476535df34fd18e49c5d4bb724e".into(),
         }),
+        neptune_windows: Some(OverlayAsset {
+            url: format!("{BASE}/neptune-windows-x86_64.tar.gz"),
+            size: 1_631_643,
+            sha256: "9e2044e95a497403ee95ded4fb7fe16c037d0f6d4aafe36fe47ab48253456ef0".into(),
+        }),
         wine_media_clipboard: Some(OverlayAsset {
             url: format!("{BASE}/wine-media-clipboard-x86_64.tar.gz"),
             size: 4_958_379,
             sha256: "031761c31b8ca56e8bb289e935b0147b354e81771c5d36192821da5107d8f736".into(),
         }),
     }
+}
+
+fn tag_version_key(tag: &str) -> Vec<u64> {
+    let trimmed = tag.trim_start_matches('v');
+    let core = trimmed.split('-').next().unwrap_or(trimmed);
+    core.split('.')
+        .map(|part| part.parse::<u64>().unwrap_or(0))
+        .collect()
 }
 
 fn disabled() -> bool {
@@ -109,12 +124,17 @@ fn read_cached_feed(voile_root: &Path) -> Option<OverlayRelease> {
 }
 
 /// The overlay release Obelisk FX wants to have installed: the cached latest
-/// release from `SpecialOperations/voile-lkd` when newer than or matching the
-/// built-in pin, else the built-in pin.
+/// release from `SpecialOperations/voile-lkd` when newer than the built-in pin,
+/// else the built-in pin.
 pub(crate) fn wanted(voile_root: &Path) -> OverlayRelease {
     let fallback = built_in();
     match read_cached_feed(voile_root) {
-        Some(cached) if is_valid_release(&cached) => cached,
+        Some(cached)
+            if is_valid_release(&cached)
+                && tag_version_key(&cached.tag) > tag_version_key(&fallback.tag) =>
+        {
+            cached
+        }
         _ => fallback,
     }
 }
@@ -133,6 +153,7 @@ fn is_valid_release(rel: &OverlayRelease) -> bool {
         && rel.fexdarwin_run.as_ref().is_none_or(is_valid_asset)
         && rel.virgl_render_server.as_ref().is_none_or(is_valid_asset)
         && rel.libvirglrenderer.as_ref().is_none_or(is_valid_asset)
+        && rel.neptune_windows.as_ref().is_none_or(is_valid_asset)
         && rel.wine_media_clipboard.as_ref().is_none_or(is_valid_asset)
 }
 
@@ -227,6 +248,8 @@ pub(crate) async fn refresh(voile_root: &Path) {
         resolve_asset(&client, &gh.assets, "virgl_render_server-arm64").await;
     let libvirglrenderer =
         resolve_asset(&client, &gh.assets, "libvirglrenderer.1.dylib-arm64").await;
+    let neptune_windows =
+        resolve_asset(&client, &gh.assets, "neptune-windows-x86_64.tar.gz").await;
     let wine_media_clipboard =
         resolve_asset(&client, &gh.assets, "wine-media-clipboard-x86_64.tar.gz").await;
 
@@ -236,6 +259,7 @@ pub(crate) async fn refresh(voile_root: &Path) {
         fexdarwin_run,
         virgl_render_server,
         libvirglrenderer,
+        neptune_windows,
         wine_media_clipboard,
     };
     if !is_valid_release(&release) {
@@ -329,9 +353,12 @@ pub(crate) async fn install(
     let overlay = wanted(voile_root);
     let already_has_managed = is_managed(voile_root);
 
-    let want_neptune = matches_neptune(&base_dir)
+    let neptune_ok = matches_neptune(&base_dir);
+    let want_neptune = neptune_ok
         && overlay.virgl_render_server.is_some()
         && overlay.libvirglrenderer.is_some();
+    let want_neptune_windows =
+        neptune_ok && base_dir.join("linux/windows").is_dir() && overlay.neptune_windows.is_some();
     let want_wine = has_compatible_wine_ffmpeg(&base_dir) && overlay.wine_media_clipboard.is_some();
 
     let mut total = overlay.wsd.size;
@@ -341,6 +368,9 @@ pub(crate) async fn install(
     if want_neptune {
         total += overlay.virgl_render_server.as_ref().unwrap().size;
         total += overlay.libvirglrenderer.as_ref().unwrap().size;
+    }
+    if want_neptune_windows {
+        total += overlay.neptune_windows.as_ref().unwrap().size;
     }
     if want_wine {
         total += overlay.wine_media_clipboard.as_ref().unwrap().size;
@@ -355,6 +385,7 @@ pub(crate) async fn install(
     let downloaded = match download_all(
         &overlay,
         want_neptune,
+        want_neptune_windows,
         want_wine,
         work.path(),
         progress,
@@ -393,12 +424,15 @@ struct DownloadedFiles {
     fexdarwin_run: Option<PathBuf>,
     virgl_render_server: Option<PathBuf>,
     libvirglrenderer: Option<PathBuf>,
+    neptune_windows: Option<PathBuf>,
     wine_media_clipboard: Option<PathBuf>,
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn download_all(
     overlay: &OverlayRelease,
     want_neptune: bool,
+    want_neptune_windows: bool,
     want_wine: bool,
     dir: &Path,
     progress: &Install,
@@ -445,6 +479,22 @@ async fn download_all(
     } else {
         (None, None)
     };
+    let neptune_windows = if want_neptune_windows {
+        Some(
+            download_asset(
+                &client,
+                overlay.neptune_windows.as_ref().unwrap(),
+                dir,
+                "neptune-windows.tar.gz",
+                progress,
+                received,
+                total,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
     let wine_media_clipboard = if want_wine {
         Some(
             download_asset(
@@ -467,6 +517,7 @@ async fn download_all(
         fexdarwin_run,
         virgl_render_server,
         libvirglrenderer,
+        neptune_windows,
         wine_media_clipboard,
     })
 }
@@ -595,6 +646,26 @@ fn apply_staged_inner(
             &staged.join("linux/graphics/lib/libvirglrenderer.1.dylib"),
             verify_codesign,
         )?;
+    }
+    if let Some(tarball) = &files.neptune_windows {
+        let unpack = tempfile::Builder::new()
+            .prefix(UNFINISHED)
+            .tempdir_in(voile_root)?;
+        let status = std::process::Command::new("/usr/bin/tar")
+            .arg("-xzf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(unpack.path())
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err(Failure::Damaged);
+        }
+        let win_dst = staged.join("linux/windows");
+        fs::create_dir_all(&win_dst)?;
+        copy_dir_files(unpack.path(), &win_dst);
     }
 
     let mut unpacked_wine: Option<tempfile::TempDir> = None;
@@ -732,7 +803,8 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.3-metalfx");
+        assert_eq!(rel.tag, "v0.1.4-metalfx");
+        assert!(rel.neptune_windows.is_some());
     }
 
     #[test]
@@ -811,14 +883,32 @@ mod tests {
             .unwrap();
         assert!(status.success());
 
+        // Build a tiny fake neptune-windows tarball.
+        let npt_src = tmp.path().join("npt-src");
+        fs::create_dir_all(&npt_src).unwrap();
+        fs::write(npt_src.join("d3d11.dll"), "neptune-d3d11").unwrap();
+        let npt_tarball = dl.join("neptune-windows.tar.gz");
+        let status = std::process::Command::new("/usr/bin/tar")
+            .args([
+                "-czf",
+                npt_tarball.to_str().unwrap(),
+                "-C",
+                npt_src.to_str().unwrap(),
+                "d3d11.dll",
+            ])
+            .status()
+            .unwrap();
+        assert!(status.success());
+
         let files = DownloadedFiles {
             wsd,
             fexdarwin_run: Some(fex),
             virgl_render_server: None,
             libvirglrenderer: None,
+            neptune_windows: Some(npt_tarball),
             wine_media_clipboard: Some(tarball),
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.3-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.4-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(
@@ -828,6 +918,10 @@ mod tests {
         assert_eq!(
             fs::read_to_string(root.join("current/linux/engine/fexdarwin-run")).unwrap(),
             "new-fex"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("current/linux/windows/d3d11.dll")).unwrap(),
+            "neptune-d3d11"
         );
         assert_eq!(
             fs::read_to_string(root.join("current/linux/wine/lib/wine/x86_64-windows/winedmo.dll"))
