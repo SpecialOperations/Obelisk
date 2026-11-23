@@ -8,10 +8,10 @@ import Observation
 @MainActor
 @Observable
 final class SupportModel {
-    /// The Discord server's public invite.
+    /// The Discord server's public invite (unused by the Obelisk FX fork UI).
     nonisolated static let discord = URL(string: "https://discord.gg/h5a7F4rZ6f")!
-    /// Where a friend gets Obelisk: its site.
-    static let site = URL(string: "https://getobelisk.app")!
+    /// Where a friend gets Obelisk FX: its GitHub repository.
+    static let site = AppIdentity.repository
     /// The start of Obelisk the sheet shows at.
     static let offeredAtStart = 3
     static let startsKey = "obelisk.support.starts"
@@ -31,7 +31,7 @@ final class SupportModel {
     /// gallery tell their own.
     init(defaults: UserDefaults = .standard,
          stars: @escaping @Sendable () async -> Int? = { await SupportModel.repositoryStars() },
-         members: @escaping @Sendable () async -> Int? = { await SupportModel.discordMembers() }) {
+         members: @escaping @Sendable () async -> Int? = { nil }) {
         self.defaults = defaults
         readStars = stars
         readMembers = members

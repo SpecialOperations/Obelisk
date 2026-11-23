@@ -32,6 +32,26 @@ enum GitHubIssues {
         return url(fields)
     }
 
+    /// The bug form for the Obelisk FX fork, opened directly on GitHub without
+    /// uploading diagnostic reports to upstream getobelisk.app.
+    static func forkBug(_ report: BugReport) -> URL {
+        let summary = shortened(report.description.prefix { !$0.isNewline }, to: titleLimit)
+        var fields = [
+            ("template", "bug_report.yml"),
+            ("title", "BUG : " + (report.game.map { "\($0.name): \(summary)" } ?? summary)),
+        ]
+        if let game = report.game {
+            fields.append(("game", "\(game.name) (\(storeName(game.store)) \(game.id))"))
+        }
+        let version = "\(AppIdentity.name) \(report.obeliskVersion)"
+        fields += [
+            ("what-happened", shortened(report.description, to: textLimit)),
+            ("obelisk-version", report.voileVersion.map { "\(version) (Voile \($0))" } ?? version),
+            ("mac", "\(report.chip), \(report.macModel), macOS \(report.macOSVersion)"),
+        ]
+        return url(fields)
+    }
+
     /// The feature form, its title started for the player.
     static func feature(obeliskVersion: String) -> URL {
         url([("template", "feature_request.yml"), ("title", "FEATURE : "), ("obelisk-version", obeliskVersion)])

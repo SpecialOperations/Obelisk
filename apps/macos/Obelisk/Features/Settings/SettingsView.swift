@@ -25,7 +25,11 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 SettingsHero(height: Self.heroHeight)
                 VStack(alignment: .leading, spacing: 34) {
-                    ObeliskCard { support }
+                    ObeliskCard {
+                        forkNotice
+                        ObeliskCardDivider()
+                        support
+                    }
                     GamePageSection(title: L10n.string("ui.settings.appearance")) {
                         ObeliskCard {
                             AppearancePicker(selection: $model.appearance)
@@ -135,7 +139,29 @@ struct SettingsView: View {
         .errorAlert(L10n.string("ui.settings.games_folder_failed"), message: Bindable(model.gamesFolder).failure)
     }
 
-    /// Opens the ways to support Obelisk, which it showed by itself once.
+    /// Clearly identifies Obelisk FX as a community fork and points users to
+    /// the fork's GitHub repository rather than the upstream maintainer.
+    private var forkNotice: some View {
+        ObeliskRow(title: L10n.string("ui.settings.fork_title")) {
+            SymbolTile(name: "arrow.triangle.branch",
+                       colors: [Color(red: 0.09, green: 0.68, blue: 0.72), Color(red: 0.04, green: 0.42, blue: 0.47)])
+        } detail: {
+            Text(L10n.string("ui.settings.fork_description", AppIdentity.name))
+        } accessory: {
+            HStack(spacing: 8) {
+                GlassCapsuleButton(title: L10n.string("ui.settings.fork_github"), systemImage: "arrow.up.right",
+                                   identifier: "settings-fork-github") {
+                    NSWorkspace.shared.open(AppIdentity.repository)
+                }
+                GlassCapsuleButton(title: L10n.string("ui.settings.fork_upstream"), systemImage: "arrow.up.right",
+                                   identifier: "settings-fork-upstream") {
+                    NSWorkspace.shared.open(AppIdentity.upstreamRepository)
+                }
+            }
+        }
+    }
+
+    /// Opens the ways to support Obelisk FX, which it showed by itself once.
     private var support: some View {
         ObeliskRow(title: L10n.string("ui.support.title", AppIdentity.name)) {
             SymbolTile(name: "heart.fill", colors: TileColors.red)
@@ -482,6 +508,7 @@ private struct SettingsHero: View {
                         }
                         Label(L10n.string("ui.settings.version", AppIdentity.version), systemImage: "tag")
                             .textSelection(.enabled)
+                        Label(L10n.string("ui.settings.fork_badge"), systemImage: "arrow.triangle.branch")
                     }
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.85))
@@ -526,14 +553,15 @@ private struct SettingsHeroPrism {
     private static let baseLeading = CGPoint(x: 292, y: 681)
     private static let baseTrailing = CGPoint(x: 732, y: 681)
     private static let center = CGPoint(x: 512, y: 490)
-    /// The stores' beams, magenta to cyan: where the icon starts each one and
-    /// how far down the prism's leading side it enters.
+    /// The stores' beams, coral-rose to champagne gold contrasting the teal sky:
+    /// where the icon starts each one and how far down the prism's leading side
+    /// it enters.
     private static let beams: [(color: Color, start: CGPoint, entry: CGFloat)] = [
-        (Color(red: 1, green: 0.31, blue: 0.847), CGPoint(x: 20, y: 600), 0.46),
-        (Color(red: 0.753, green: 0.294, blue: 1), CGPoint(x: 20, y: 750), 0.505),
-        (Color(red: 0.482, green: 0.361, blue: 1), CGPoint(x: 70, y: 890), 0.55),
-        (Color(red: 0.298, green: 0.553, blue: 1), CGPoint(x: 170, y: 1000), 0.595),
-        (Color(red: 0.247, green: 0.878, blue: 1), CGPoint(x: 310, y: 1080), 0.64),
+        (Color(red: 1.000, green: 0.263, blue: 0.396), CGPoint(x: 20, y: 600), 0.46),
+        (Color(red: 1.000, green: 0.451, blue: 0.196), CGPoint(x: 20, y: 750), 0.505),
+        (Color(red: 1.000, green: 0.643, blue: 0.157), CGPoint(x: 70, y: 890), 0.55),
+        (Color(red: 1.000, green: 0.827, blue: 0.220), CGPoint(x: 170, y: 1000), 0.595),
+        (Color(red: 1.000, green: 0.953, blue: 0.580), CGPoint(x: 310, y: 1080), 0.64),
     ]
     /// Where the white beam leaves the prism's trailing side.
     private static let exit = (on(apex, baseTrailing, 0.40), on(apex, baseTrailing, 0.47))
@@ -553,9 +581,9 @@ private struct SettingsHeroPrism {
     func draw(in context: inout GraphicsContext) {
         context.fill(Path(CGRect(origin: .zero, size: size)), with: .radialGradient(
             Gradient(stops: [
-                .init(color: Color(red: 0.165, green: 0.102, blue: 0.416), location: 0),
-                .init(color: Color(red: 0.067, green: 0.043, blue: 0.2), location: 0.55),
-                .init(color: Color(red: 0.02, green: 0.012, blue: 0.071), location: 1),
+                .init(color: Color(red: 0.068, green: 0.455, blue: 0.485), location: 0),
+                .init(color: Color(red: 0.030, green: 0.235, blue: 0.265), location: 0.55),
+                .init(color: Color(red: 0.012, green: 0.090, blue: 0.108), location: 1),
             ]),
             center: place(CGPoint(x: 560, y: 420)), startRadius: 0, endRadius: max(size.width * 0.8, 680 * scale)))
 
@@ -602,7 +630,7 @@ private struct SettingsHeroPrism {
         ])
         context.drawLayer { glow in
             glow.addFilter(.blur(radius: 24 * scale))
-            glow.fill(beamOut, with: .color(Color(red: 1, green: 0.839, blue: 0.965).opacity(0.9)))
+            glow.fill(beamOut, with: .color(Color(red: 0.82, green: 0.98, blue: 0.97).opacity(0.9)))
         }
         context.fill(beamOut, with: .linearGradient(
             Gradient(colors: [.white, .white.opacity(0.75)]),

@@ -40,7 +40,7 @@ struct BugReportSheet: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 20) {
-            SheetHeader(title: title, subtitle: L10n.string("ui.report.message", AppIdentity.name),
+            SheetHeader(title: title, subtitle: L10n.string("ui.report.fork_message", AppIdentity.name),
                         symbol: "ladybug.fill", colors: TileColors.red)
             VStack(alignment: .leading, spacing: 8) {
                 SheetFieldLabel(text: L10n.string("ui.report.description"))
@@ -55,26 +55,16 @@ struct BugReportSheet: View {
                     .accessibilityLabel(L10n.string("ui.report.description"))
                     .accessibilityIdentifier("bug-report-description")
             }
-            VStack(alignment: .leading, spacing: 8) {
-                SheetFieldLabel(text: L10n.string("ui.report.contact"))
-                SignInField(symbol: "envelope", placeholder: L10n.string("ui.report.contact_prompt"),
-                            text: $model.contact, accessibilityLabel: L10n.string("ui.report.contact"))
-                    .accessibilityIdentifier("bug-report-contact")
-            }
             logs
-            if case let .failed(tooMany) = model.phase {
-                SheetNotice(kind: .failure,
-                            text: tooMany ? L10n.string("ui.report.too_many") : L10n.string("ui.report.failed"))
-            }
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
                 GlassCapsuleButton(title: L10n.string("ui.common.cancel"), size: .large,
                                    identifier: "bug-report-cancel", action: close)
                     .keyboardShortcut(.cancelAction)
-                    .disabled(model.phase == .sending)
-                AccentCapsuleButton(title: L10n.string("ui.report.send"), systemImage: "paperplane.fill", size: .large,
-                                    isBusy: model.phase == .sending, identifier: "bug-report-send") {
-                    Task { await model.send() }
+                AccentCapsuleButton(title: L10n.string("ui.report.open_issue"), systemImage: "arrow.up.right",
+                                    size: .large, identifier: "bug-report-send") {
+                    model.openForkGitHubIssue()
+                    close()
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.canSend)
@@ -82,26 +72,22 @@ struct BugReportSheet: View {
         }
     }
 
-    /// The Attach logs switch, what goes out while it is on, and what the
-    /// report holds besides.
+    /// Diagnostic files on disk that the player can attach to the GitHub issue.
     private var logs: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ObeliskCard {
-                ObeliskRow(title: L10n.string("ui.report.attach_logs")) {
-                    SymbolTile(name: "doc.text.fill", colors: TileColors.grey)
-                } accessory: {
-                    Toggle(L10n.string("ui.report.attach_logs"), isOn: $model.attachesLogs)
-                        .toggleStyle(.switch)
-                        .labelsHidden()
-                        .pointerCursor()
-                        .accessibilityIdentifier("bug-report-attach-logs")
-                }
-                if model.attachesLogs {
+            if !model.files.isEmpty {
+                ObeliskCard {
+                    ObeliskRow(title: L10n.string("ui.report.attach_logs")) {
+                        SymbolTile(name: "doc.text.fill", colors: TileColors.grey)
+                    } detail: {
+                        Text(L10n.string("ui.report.fork_logs_hint"))
+                    } accessory: {
+                        EmptyView()
+                    }
                     ObeliskCardDivider()
                     files
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: model.attachesLogs)
             Text(L10n.string("ui.report.privacy", AppIdentity.name))
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)

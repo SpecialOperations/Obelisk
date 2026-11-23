@@ -101,7 +101,7 @@ final class AppModel {
         appearance = AppAppearance(rawValue: defaults.string(forKey: "appearance") ?? "system") ?? .system
         language = AppLanguage(defaults: defaults, domain: defaultsDomain)
         updatesGamesAutomatically = defaults.object(forKey: Self.automaticUpdatesKey) as? Bool ?? true
-        let sharesGamePerformance = defaults.object(forKey: Self.sharePerformanceKey) as? Bool ?? true
+        let sharesGamePerformance = defaults.object(forKey: Self.sharePerformanceKey) as? Bool ?? false
         self.sharesGamePerformance = sharesGamePerformance
         // Every storefront's library shares one cache, as every cache of the
         // directory does, `LaunchHistory.live`'s included.

@@ -1,17 +1,17 @@
 import AppKit
 import SwiftUI
 
-/// The ways to support Obelisk, each a card: a star on GitHub and the Discord
-/// server open their page, beside how many stars and members they have, and
-/// sharing copies the link a friend gets Obelisk from.
+/// The ways to support Obelisk FX, each a card: a star on the fork's GitHub
+/// repository, reporting issues on the fork (never upstream), and copying the
+/// repository link to share, with clear attribution to upstream Obelisk.
 struct SupportSheet: View {
     let model: SupportModel
     let close: () -> Void
     /// Whether the link was copied since the sheet opened.
     @State private var copiedLink = false
 
-    /// Discord's own color, top to bottom.
-    private static let discordColors = [Color(red: 0.45, green: 0.5, blue: 0.98), Color(red: 0.345, green: 0.396, blue: 0.949)]
+    private static let tealColors = [Color(red: 0.09, green: 0.68, blue: 0.72), Color(red: 0.04, green: 0.42, blue: 0.47)]
+    private static let coralColors = [Color(red: 1.0, green: 0.36, blue: 0.32), Color(red: 0.90, green: 0.22, blue: 0.34)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -33,20 +33,15 @@ struct SupportSheet: View {
                     Image(systemName: "arrow.up.right")
                 }
                 .accessibilityValue(model.stars.map { L10n.string("ui.support.stars", Int64($0)) } ?? "")
-                SupportWay(title: L10n.string("ui.support.discord"),
-                           detail: L10n.string("ui.support.discord_description"),
-                           identifier: "support-discord") {
-                    NSWorkspace.shared.open(SupportModel.discord)
+                SupportWay(title: L10n.string("ui.support.issues"),
+                           detail: L10n.string("ui.support.issues_description", AppIdentity.name),
+                           identifier: "support-issues") {
+                    NSWorkspace.shared.open(AppIdentity.repository.appending(path: "issues"))
                 } icon: {
-                    LogoTile(asset: "DiscordLogo", colors: Self.discordColors, size: 36)
+                    SymbolTile(name: "ladybug.fill", colors: Self.coralColors, size: 36)
                 } accessory: {
-                    if let members = model.members {
-                        SupportCount(symbol: "person.2.fill", count: members)
-                            .transition(.opacity)
-                    }
                     Image(systemName: "arrow.up.right")
                 }
-                .accessibilityValue(model.members.map { L10n.string("ui.support.members", Int64($0)) } ?? "")
                 SupportWay(title: L10n.string("ui.support.share"),
                            detail: L10n.string("ui.support.share_description"),
                            identifier: "support-share") {
@@ -54,7 +49,7 @@ struct SupportSheet: View {
                     NSPasteboard.general.setString(SupportModel.site.absoluteString, forType: .string)
                     copiedLink = true
                 } icon: {
-                    SymbolTile(name: "square.and.arrow.up", colors: TileColors.violet, size: 36)
+                    SymbolTile(name: "square.and.arrow.up", colors: Self.tealColors, size: 36)
                 } accessory: {
                     if copiedLink {
                         Text(L10n.string("ui.support.link_copied"))
@@ -64,12 +59,25 @@ struct SupportSheet: View {
                 }
                 .accessibilityValue(copiedLink ? L10n.string("ui.support.link_copied") : "")
             }
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.branch")
+                    .font(.system(size: 11))
+                Text(L10n.string("ui.support.fork_credit", AppIdentity.name))
+                Spacer(minLength: 0)
+                Button(L10n.string("ui.settings.fork_upstream")) {
+                    NSWorkspace.shared.open(AppIdentity.upstreamRepository)
+                }
+                .obeliskButtonStyle(.plain)
+                .foregroundStyle(ObeliskStyle.accent)
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
         }
         .padding(24)
         .frame(width: 480)
         .tint(ObeliskStyle.accent)
         .animation(.easeInOut(duration: 0.2), value: model.stars)
-        .animation(.easeInOut(duration: 0.2), value: model.members)
         .animation(.easeInOut(duration: 0.2), value: copiedLink)
         .accessibilityIdentifier("support-sheet")
     }
@@ -120,8 +128,8 @@ private struct SupportCount: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 9)
         .frame(height: 22)
-        .background(LinearGradient(colors: [Color(red: 0.639, green: 0.294, blue: 1),
-                                            Color(red: 0.133, green: 0.784, blue: 0.91)],
+        .background(LinearGradient(colors: [Color(red: 0.068, green: 0.56, blue: 0.60),
+                                            Color(red: 0.96, green: 0.45, blue: 0.22)],
                                    startPoint: .leading, endPoint: .trailing), in: .capsule)
         .accessibilityHidden(true)
     }

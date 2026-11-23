@@ -96,7 +96,7 @@ final class BugReportsTests: XCTestCase {
                                contact: "zag@example.com", mac: Self.mac, obeliskVersion: "0.1.0",
                                voileVersion: "v26.3.0-13")
         let url = GitHubIssues.bug(report, code: "K7F3-9QX2")
-        XCTAssertTrue(url.absoluteString.hasPrefix("https://github.com/Zagrios/obelisk/issues/new?"))
+        XCTAssertTrue(url.absoluteString.hasPrefix("https://github.com/SpecialOperations/Obelisk/issues/new?"))
         XCTAssertEqual(try fields(url), [
             "template": "bug_report.yml",
             "title": "BUG : ELDEN RING: It crashes in C++ code & co = boom.",

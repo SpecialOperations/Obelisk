@@ -8,12 +8,12 @@
 <plist version="1.0">
 <dict>
 	<key>SUFeedURL</key>
-	<string>https://github.com/Zagrios/Obelisk/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/SpecialOperations/Obelisk/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>pBrOTkfrxqlCTkKhDfXsiULL9PfDFBGGKsNn5uhsUdM=</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUAutomaticallyUpdate</key>
-	<true/>
+	<false/>
 </dict>
 </plist>

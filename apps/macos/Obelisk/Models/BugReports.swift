@@ -436,6 +436,17 @@ final class BugReportModel: Identifiable {
         if let issue { NSWorkspace.shared.open(issue) }
     }
 
+    /// Opens a pre-filled bug report on the Obelisk FX fork repository on
+    /// GitHub without sending anything to upstream getobelisk.app.
+    func openForkGitHubIssue() {
+        guard canSend else { return }
+        let report = BugReport(subject: subject, description: description, contact: "", mac: mac,
+                               obeliskVersion: AppIdentity.version, voileVersion: sources.voile())
+        let url = GitHubIssues.forkBug(report)
+        issue = url
+        NSWorkspace.shared.open(url)
+    }
+
     /// Shows the attached files that are on disk in Finder.
     func revealFiles() {
         NSWorkspace.shared.activateFileViewerSelecting(files.compactMap(\.url))

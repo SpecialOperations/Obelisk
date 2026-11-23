@@ -2,11 +2,13 @@ import Foundation
 
 enum AppIdentity {
     // Keep the display name independent of storage identifiers for a future rename.
-    static let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Obelisk"
+    static let name = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Obelisk FX"
     static let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     static let storageIdentifier = "com.zagrios.obelisk"
-    /// Obelisk's repository on GitHub.
-    static let repository = URL(string: "https://github.com/Zagrios/obelisk")!
+    /// Obelisk FX's fork repository on GitHub.
+    static let repository = URL(string: "https://github.com/SpecialOperations/Obelisk")!
+    /// The upstream Obelisk repository this fork is based on.
+    static let upstreamRepository = URL(string: "https://github.com/Zagrios/Obelisk")!
     /// Whether this process is the tests' host rather than an Obelisk of its
     /// own: it leaves the player's accounts, games and settings alone.
     static let isTestHost = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil

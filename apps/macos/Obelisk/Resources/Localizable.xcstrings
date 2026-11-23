@@ -23542,49 +23542,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sendet beim Beenden eines Spiels dessen Bildrate, wie es beendet wurde und den Chip Ihres Macs an getobelisk.app, wo zu sehen ist, wie jedes Spiel auf jedem Mac läuft. Nichts davon identifiziert Sie."
+            "value": "In Obelisk FX standardmäßig deaktiviert. Wenn aktiviert, werden beim Beenden eines Spiels Bildrate, Beendigungsstatus und der Chip Ihres Macs an das Upstream-Projekt getobelisk.app gesendet. Nichts davon identifiziert Sie."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When a game closes, sends its frame rate, how it ended and your Mac's chip to getobelisk.app, which shows how each game runs on each Mac. Nothing in it identifies you."
+            "value": "Off by default in Obelisk FX. When enabled, sends frame rate, exit status, and your Mac's chip to upstream getobelisk.app when a game closes. Nothing in it identifies you."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuando se cierra un juego, envía su velocidad de fotogramas, cómo terminó y el chip de tu Mac a getobelisk.app, que muestra cómo funciona cada juego en cada Mac. Nada de ello te identifica."
+            "value": "Desactivado de forma predeterminada en Obelisk FX. Si se activa, envía la tasa de fotogramas, cómo terminó y el chip de tu Mac al proyecto original getobelisk.app al cerrar un juego. Nada de ello te identifica."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quand un jeu se ferme, envoie sa fréquence d'images, la façon dont il s'est terminé et la puce de votre Mac à getobelisk.app, qui montre comment chaque jeu tourne sur chaque Mac. Rien de tout cela ne vous identifie."
+            "value": "Désactivé par défaut dans Obelisk FX. Une fois activé, envoie la fréquence d'images, le statut de fermeture et la puce de votre Mac au projet d'origine getobelisk.app. Rien ne vous identifie."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quando un gioco si chiude, invia il suo frame rate, come è finito e il chip del tuo Mac a getobelisk.app, che mostra come gira ogni gioco su ogni Mac. Nulla di ciò che invia ti identifica."
+            "value": "Disattivato per impostazione predefinita in Obelisk FX. Se attivo, invia frame rate, stato di chiusura e chip del Mac al progetto originale getobelisk.app. Nulla ti identifica."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ゲームの終了時に、フレームレート、終了の状況、お使いのMacのチップをgetobelisk.appに送信します。このサイトでは、各ゲームがそれぞれのMacでどのように動作するかを確認できます。個人を特定できる情報は含まれません。"
+            "value": "Obelisk FX ではデフォルトでオフです。オンにすると、ゲーム終了時にフレームレート、終了状態、Mac のチップを元のプロジェクト getobelisk.app に送信します。個人を特定する情報は含まれません。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quando um jogo é fechado, envia a taxa de quadros, como ele terminou e o chip do seu Mac para getobelisk.app, que mostra como cada jogo roda em cada Mac. Nada disso identifica você."
+            "value": "Desativado por padrão no Obelisk FX. Quando ativado, envia a taxa de quadros, o status de saída e o chip do seu Mac para o getobelisk.app original ao fechar um jogo. Nada identifica você."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "游戏关闭时，将其帧率、结束方式和您 Mac 的芯片发送到 getobelisk.app，该网站会展示每款游戏在每种 Mac 上的运行情况。其中不含任何可识别您身份的信息。"
+            "value": "在 Obelisk FX 中默认关闭。开启后，游戏退出时会向原项目 getobelisk.app 发送帧率、退出状态和 Mac 芯片信息，不包含任何可识别个人身份的数据。"
           }
         }
       }
@@ -44524,49 +44524,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sagen Sie den Entwicklern, was schiefgelaufen ist, mit den Protokollen von %@, wenn Sie einverstanden sind."
+            "value": "Öffnen Sie einen Fehlerbericht im %@-GitHub-Repository (SpecialOperations/Obelisk), nicht beim Upstream-Obelisk."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tell the developers what went wrong, with %@'s logs if you agree."
+            "value": "Open a bug report on the %@ GitHub repository (SpecialOperations/Obelisk), not upstream Obelisk."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuenta a los desarrolladores qué ha fallado, con los registros de %@ si estás de acuerdo."
+            "value": "Abre un informe de error en el repositorio GitHub de %@ (SpecialOperations/Obelisk), no en el Obelisk original."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Expliquez aux développeurs ce qui ne va pas, avec les logs d’%@ si vous le souhaitez."
+            "value": "Ouvrez un rapport de bug sur le dépôt GitHub de %@ (SpecialOperations/Obelisk), et non sur Obelisk d'origine."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Racconta agli sviluppatori cosa è andato storto, con i log di %@ se sei d'accordo."
+            "value": "Apri una segnalazione sul repository GitHub di %@ (SpecialOperations/Obelisk), non su Obelisk originale."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "発生した問題を開発者にお知らせください。同意いただければ、%@のログも添付されます。"
+            "value": "元の Obelisk ではなく %@ の GitHub リポジトリ (SpecialOperations/Obelisk) でバグを報告します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conte aos desenvolvedores o que deu errado, com os registros do %@ se você concordar."
+            "value": "Abra um relatório de bug no repositório GitHub do %@ (SpecialOperations/Obelisk), não no Obelisk original."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "告诉开发者出了什么问题，如果您同意，可附上 %@ 的日志。"
+            "value": "在 %@ 的 GitHub 仓库 (SpecialOperations/Obelisk) 提交错误报告，而非上游 Obelisk。"
           }
         }
       }
@@ -44789,49 +44789,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schlagen Sie eine Idee auf GitHub vor. %@ öffnet das Formular für Sie."
+            "value": "Schlagen Sie eine Idee im %@-GitHub-Repository (SpecialOperations/Obelisk) vor."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suggest an idea on GitHub. %@ opens the form for you."
+            "value": "Suggest an idea on the %@ GitHub repository (SpecialOperations/Obelisk)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sugiere una idea en GitHub. %@ abre el formulario por ti."
+            "value": "Sugiere una idea en el repositorio GitHub de %@ (SpecialOperations/Obelisk)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Proposez une idée sur GitHub. %@ vous ouvre le formulaire."
+            "value": "Proposez une idée sur le dépôt GitHub de %@ (SpecialOperations/Obelisk)."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Proponi un'idea su GitHub. %@ apre il modulo per te."
+            "value": "Suggerisci un'idea sul repository GitHub di %@ (SpecialOperations/Obelisk)."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "GitHubでアイデアをご提案ください。%@がフォームを開きます。"
+            "value": "%@ の GitHub リポジトリ (SpecialOperations/Obelisk) で機能を提案します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sugira uma ideia no GitHub. O %@ abre o formulário para você."
+            "value": "Sugira uma ideia no repositório GitHub do %@ (SpecialOperations/Obelisk)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在 GitHub 上提出想法。%@ 会为您打开表单。"
+            "value": "在 %@ 的 GitHub 仓库 (SpecialOperations/Obelisk) 提出功能建议。"
           }
         }
       }
@@ -45425,49 +45425,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ sucht einmal am Tag nach einer neuen Version."
+            "value": "Prüft das %@-Fork-Repository (SpecialOperations/Obelisk) auf neue Versionen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ looks for a new version once a day."
+            "value": "Checks the %@ fork repository (SpecialOperations/Obelisk) for new releases."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ busca una nueva versión una vez al día."
+            "value": "Busca nuevas versiones en el repositorio del fork %@ (SpecialOperations/Obelisk)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ cherche une nouvelle version une fois par jour."
+            "value": "Vérifie les nouvelles versions sur le dépôt du fork %@ (SpecialOperations/Obelisk)."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ cerca una nuova versione una volta al giorno."
+            "value": "Cerca nuove versioni sul repository del fork %@ (SpecialOperations/Obelisk)."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@は1日に1回、新しいバージョンを確認します。"
+            "value": "%@ フォークリポジトリ (SpecialOperations/Obelisk) で新しいリリースを確認します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O %@ procura uma nova versão uma vez por dia."
+            "value": "Verifica novas versões no repositório do fork %@ (SpecialOperations/Obelisk)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 每天检查一次新版本。"
+            "value": "检查 %@ 分支仓库 (SpecialOperations/Obelisk) 中的新版本。"
           }
         }
       }
@@ -51003,49 +51003,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kopieren Sie den Link zu getobelisk.app, um ihn weiterzugeben."
+            "value": "Kopieren Sie den Link zu SpecialOperations/Obelisk auf GitHub zum Teilen."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy the link to getobelisk.app to send it to them."
+            "value": "Copy the link to SpecialOperations/Obelisk on GitHub to send it to them."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copia el enlace de getobelisk.app para enviárselo."
+            "value": "Copia el enlace a SpecialOperations/Obelisk en GitHub para enviárselo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copiez le lien de getobelisk.app pour le leur envoyer."
+            "value": "Copiez le lien vers SpecialOperations/Obelisk sur GitHub pour le partager."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copia il link di getobelisk.app per inviarlo a loro."
+            "value": "Copia il link a SpecialOperations/Obelisk su GitHub per inviarlo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "getobelisk.appのリンクをコピーして友だちに送れます。"
+            "value": "SpecialOperations/Obelisk の GitHub リンクをコピーして共有します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copie o link do getobelisk.app para enviar a eles."
+            "value": "Copie o link para SpecialOperations/Obelisk no GitHub para compartilhar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "复制 getobelisk.app 的链接，发送给他们。"
+            "value": "复制 GitHub 上的 SpecialOperations/Obelisk 链接并分享给好友。"
           }
         }
       }
@@ -51301,6 +51301,536 @@
           "stringUnit": {
             "state": "translated",
             "value": "支持我们"
+          }
+        }
+      }
+    },
+    "ui.settings.fork_badge": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Community-Fork von Obelisk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Community fork of Obelisk"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork comunitario de Obelisk"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork communautaire d'Obelisk"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork della community di Obelisk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk のコミュニティフォーク"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork da comunidade do Obelisk"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk 社区分支"
+          }
+        }
+      }
+    },
+    "ui.settings.fork_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Community-Fork von Obelisk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Community fork of Obelisk"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork comunitario de Obelisk"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork communautaire d'Obelisk"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork della community di Obelisk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk のコミュニティフォーク"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork da comunidade do Obelisk"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk 社区分支"
+          }
+        }
+      }
+    },
+    "ui.settings.fork_description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist ein unabhängiger Fork von Zagrios/Obelisk von SpecialOperations. Bitte melden Sie Fehler und Probleme zu diesem Fork auf SpecialOperations/Obelisk und nicht beim Upstream-Maintainer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is an independent fork of Zagrios/Obelisk by SpecialOperations. Please report bugs and fork-specific issues on SpecialOperations/Obelisk rather than to the upstream maintainer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ es un fork independiente de Zagrios/Obelisk creado por SpecialOperations. Informa de errores y problemas específicos de este fork en SpecialOperations/Obelisk y no al desarrollador original."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est un fork indépendant de Zagrios/Obelisk par SpecialOperations. Merci de signaler les bugs et problèmes liés à ce fork sur SpecialOperations/Obelisk plutôt qu'au mainteneur d'origine."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ è un fork indipendente di Zagrios/Obelisk curato da SpecialOperations. Segnala bug e problemi di questo fork su SpecialOperations/Obelisk invece che al manutentore originale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は SpecialOperations による Zagrios/Obelisk の独立したフォークです。バグやフォーク固有の問題は、元の開発者ではなく SpecialOperations/Obelisk に報告してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ é um fork independente de Zagrios/Obelisk mantido por SpecialOperations. Relate bugs e problemas específicos deste fork em SpecialOperations/Obelisk, e não ao mantenedor original."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 是由 SpecialOperations 维护的 Zagrios/Obelisk 独立分支。请在 SpecialOperations/Obelisk 提交此分支的错误与问题，而非向上游维护者反馈。"
+          }
+        }
+      }
+    },
+    "ui.settings.fork_github": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork auf GitHub"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fork GitHub"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub del fork"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub du fork"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub del fork"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーク GitHub"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub do fork"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分支 GitHub"
+          }
+        }
+      }
+    },
+    "ui.settings.fork_upstream": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upstream-Obelisk"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upstream Obelisk"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk original"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk d'origine"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk originale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "元の Obelisk"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obelisk original"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游 Obelisk"
+          }
+        }
+      }
+    },
+    "ui.support.issues": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler melden & auf GitHub diskutieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report bugs & discuss on GitHub"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informar errores y comentar en GitHub"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signaler un bug sur GitHub"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segnala bug su GitHub"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub でバグ報告・相談"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatar bugs no GitHub"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 GitHub 反馈问题"
+          }
+        }
+      }
+    },
+    "ui.support.issues_description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melden Sie Probleme oder Feedback für %@ auf SpecialOperations/Obelisk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File issues or feedback for %@ on SpecialOperations/Obelisk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía errores o comentarios para %@ en SpecialOperations/Obelisk."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signalez un problème ou envoyez un retour pour %@ sur SpecialOperations/Obelisk."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segnala problemi o invia feedback per %@ su SpecialOperations/Obelisk."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の不具合やフィードバックを SpecialOperations/Obelisk に報告します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envie problemas ou feedback para o %@ em SpecialOperations/Obelisk."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 SpecialOperations/Obelisk 为 %@ 提交问题或建议。"
+          }
+        }
+      }
+    },
+    "ui.support.fork_credit": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ist ein Community-Fork von Zagrios/Obelisk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is a community fork of Zagrios/Obelisk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ es un fork comunitario de Zagrios/Obelisk."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est un fork communautaire de Zagrios/Obelisk."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ è un fork della community di Zagrios/Obelisk."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は Zagrios/Obelisk のコミュニティフォークです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ é um fork da comunidade de Zagrios/Obelisk."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 是 Zagrios/Obelisk 的社区分支。"
+          }
+        }
+      }
+    },
+    "ui.report.fork_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschreiben Sie, was schiefgelaufen ist. Dies öffnet einen Fehlerbericht im %@-Fork (SpecialOperations/Obelisk), nicht beim Upstream-Obelisk."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tell us what went wrong. This opens a bug report on the %@ fork (SpecialOperations/Obelisk), not upstream Obelisk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuéntanos qué salió mal. Esto abre un informe de error en el fork %@ (SpecialOperations/Obelisk), no en el Obelisk original."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expliquez ce qui s'est mal passé. Cela ouvre un rapport de bug sur le fork %@ (SpecialOperations/Obelisk), et non sur Obelisk d'origine."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccontaci cosa è andato storto. Verrà aperto un bug report sul fork %@ (SpecialOperations/Obelisk), non su Obelisk originale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起きた問題を入力してください。元の Obelisk ではなく %@ フォーク (SpecialOperations/Obelisk) のバグ報告フォームを開きます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conte o que deu errado. Isso abre um relatório de bug no fork %@ (SpecialOperations/Obelisk), não no Obelisk original."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请描述遇到的问题。这将在 %@ 分支 (SpecialOperations/Obelisk) 打开问题表单，而非上游 Obelisk。"
+          }
+        }
+      }
+    },
+    "ui.report.fork_logs_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken Sie auf „Im Finder zeigen“, um diese Protokolle an Ihr GitHub-Issue anzuhängen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Show in Finder to attach these log files to your GitHub issue."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic en Mostrar en el Finder para adjuntar estos registros a tu issue de GitHub."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez sur Afficher dans le Finder pour joindre ces journaux à votre ticket GitHub."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fai clic su Mostra nel Finder per allegare questi log alla segnalazione su GitHub."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Finder で表示」をクリックすると、これらのログを GitHub の Issue に添付できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique em Mostrar no Finder para anexar estes arquivos de log à sua issue no GitHub."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按“在访达中显示”可将以下日志文件附加到 GitHub Issue 中。"
           }
         }
       }

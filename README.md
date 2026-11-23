@@ -1,44 +1,45 @@
 <a name="readme-top"></a>
 
 <div align="center">
-  <img src="assets/readme/icon.png" alt="Obelisk icon" width="200" height="200">
-  <h1>Obelisk (MetalFX Fork)</h1>
+  <img src="assets/readme/icon.png" alt="Obelisk FX icon" width="200" height="200">
+  <h1>Obelisk FX</h1>
   <p>
     VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, and <b>Mic Voice Isolation</b> toggles to Launch Settings for the Linux engine.
+    Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, native clipboard sync, and in-game video/media playback fixes for the Linux engine.
   </p>
   <p>
-    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Fork Release</b></a>
+    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Obelisk FX</b></a>
     ·
     <a href="https://github.com/SpecialOperations/voile-lkd/releases/latest"><b>MetalFX Window Server (voile-lkd)</b></a>
     ·
-    <a href="https://github.com/Zagrios/Obelisk">Upstream Obelisk</a>
+    <a href="https://github.com/SpecialOperations/Obelisk/issues"><b>Report an Issue</b></a>
     ·
-    <a href="https://github.com/Zagrios/Obelisk/pull/111">Upstream PR #111</a>
+    <a href="https://github.com/Zagrios/Obelisk">Upstream Obelisk</a>
   </p>
   <p>
-    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><img src="https://img.shields.io/github/v/release/SpecialOperations/Obelisk?style=for-the-badge&label=fork%20release" alt="Latest fork release"></a>
+    <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><img src="https://img.shields.io/github/v/release/SpecialOperations/Obelisk?style=for-the-badge&color=0E7880&label=Obelisk%20FX" alt="Latest Obelisk FX release"></a>
     <img src="https://img.shields.io/badge/macOS-26.4%2B-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS 26.4 or later">
     <img src="https://img.shields.io/badge/Apple%20silicon-only-000000?style=for-the-badge" alt="Apple silicon only">
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/SpecialOperations/Obelisk?style=for-the-badge" alt="License: GPL-3.0"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/SpecialOperations/Obelisk?style=for-the-badge&color=FF7332" alt="License: GPL-3.0"></a>
   </p>
 </div>
 
-> **Fork notice:** This repository is a fork of [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) (all credit for Obelisk and Voile goes to Zagrios). It adds per-game **MetalFX Spatial** and **MetalFX Frame Generation** switches in Launch Settings ([PR #111](https://github.com/Zagrios/Obelisk/pull/111)), paired with the MetalFX-enabled `wsd` window server in [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd) ([PR #26](https://github.com/Zagrios/voile-lkd/pull/26)).
+> **Fork notice:** **Obelisk FX** is an independent community fork of [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) (all credit for Obelisk and Voile goes to Zagrios). Please report any bugs, crashes, or questions about Obelisk FX on **[SpecialOperations/Obelisk/issues](https://github.com/SpecialOperations/Obelisk/issues)** rather than to the upstream maintainer or upstream Discord.
 
 <p align="center">
-  <a href="https://getobelisk.app"><img src="assets/readme/macbook.png" alt="Obelisk's Home on a MacBook Pro: Rocket League, the recently played games and the games installed on this Mac" width="800"></a>
+  <a href="https://github.com/SpecialOperations/Obelisk"><img src="assets/readme/macbook.png" alt="Obelisk FX's Home on a MacBook Pro: Rocket League, the recently played games and the games installed on this Mac" width="800"></a>
 </p>
 
-## Fork Features & Improvements
+## Obelisk FX Features & Improvements
 
 - **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 50%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
 - **2× MetalFX Frame Generation** (Linux engine, macOS 26+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
 - **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings** (off by default; recommended when using your device's speakers and built-in mic). Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
-- **Linux-engine stability & polish** (included automatically via the companion [voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) installer):
+- **Native Bidirectional Clipboard Sync** (Linux engine): Seamlessly copy and paste between macOS and Windows games (including in-game paste buttons and `Cmd+C/V/X/A`) via native clipboard synchronization between `wsd` and `wineobelisk.drv`.
+- **In-Game Video & Media Playback** (Linux engine): Full Proton-GE FFmpeg-backed Media Foundation playback (`winedmo` / `mfmediaengine`) and same-process D3D11 shared texture support in Neptune so in-world/in-game video players (such as VRChat video players) play video and audio reliably.
+- **Linux-engine stability & polish** (via the companion [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd), [SpecialOperations/neptune](https://github.com/SpecialOperations/neptune), and [SpecialOperations/voile-wine](https://github.com/SpecialOperations/voile-wine) forks):
   - Higher GPU resource upload limit (512 MiB) so large worlds and assets load reliably without device-removed crashes.
   - Fixes for intermittent emulation crashes and deadlocks during heavy scene loads, garbage-collection thread suspension, and rapid ptrace attach/detach churn.
-  - Fix for in-game MediaFoundation video player crashes when switching or seeking streams.
   - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
 
 ## Contents
@@ -81,23 +82,23 @@ Windows games play too. Obelisk sets everything up for you: no bottles to create
 - Rosetta, for Windows games. If it is missing, Obelisk asks macOS to install it the first time a game needs it.
 - Disk space for your games. The first Windows game also downloads [Voile](https://github.com/Zagrios/voile), a few hundred MB, once.
 
-## Installation (MetalFX Fork)
+## Installation (Obelisk FX)
 
-1. Download `Obelisk-0.6.4-metalfx-arm64.dmg` from the [latest fork release](https://github.com/SpecialOperations/Obelisk/releases/latest).
-2. Open the disk image and drag **Obelisk** onto **Applications**.
+1. Download the latest Obelisk FX `.dmg` from the [latest fork release](https://github.com/SpecialOperations/Obelisk/releases/latest).
+2. Open the disk image and drag **Obelisk FX** (`Obelisk.app`) onto **Applications**.
 3. Because this community fork build is ad-hoc signed (not notarized by Apple), remove macOS's quarantine flag once before opening:
    ```sh
    xattr -dr com.apple.quarantine /Applications/Obelisk.app
    ```
-4. Launch Obelisk and start any Windows game once if you don't already have Voile installed, then install the companion MetalFX `wsd` window server from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) (one command):
+4. Launch Obelisk FX and start any Windows game once if you don't already have Voile installed, then install the companion MetalFX `wsd` window server from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) (one command):
    ```sh
    curl -fsSL https://github.com/SpecialOperations/voile-lkd/releases/latest/download/install-metalfx-wsd.sh | bash
    ```
 5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial**, **MetalFX Frame Generation**, and/or **Mic Voice Isolation** on.
 
-> **Note on auto-updates:** Accepting an upstream Obelisk auto-update in **Settings → Updates** will replace this fork with upstream [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) until [PR #111](https://github.com/Zagrios/Obelisk/pull/111) is merged. To revert the Voile `wsd` binary to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`.
+> **Note:** Obelisk FX shares the `com.zagrios.obelisk` library folder so your installed games, prefixes, and Keychain sessions carry over seamlessly. To revert the Voile runtime to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`.
 
-**Upstream installation:** If you want the official Apple-notarized release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/obelisk/releases/latest).
+**Upstream installation:** If you want the official Apple-notarized release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk/releases/latest).
 
 ## Getting started
 
@@ -231,8 +232,8 @@ Obelisk has no account of its own and does not track what you do in it. It talks
   - the Mac: its chip, GPU cores, model, memory and macOS version,
   - the versions of Obelisk and [Voile](https://github.com/Zagrios/voile) it ran with.
 - **What it never sends.** Nothing in a report names you or ties two reports together: no account, no store ID of yours, no device ID. The site's database keeps each report and the time it arrived, not your IP address.
-- **Turning it off.** Turn off **Share game performance** in **Settings → Games**. It is on by default. With it off, Obelisk sends nothing when a game closes, and still shows Expected FPS.
-- **Bug reports.** Obelisk sends one only when you send it yourself, from **SOS** on a game's page or **I found a bug** in **Settings → Help**. It holds what you wrote, the contact you gave if any, your Mac's chip, model and macOS version, and the versions of Obelisk and Voile. With **Attach logs** on, it adds the files the sheet lists: the game's logs, Obelisk's log from the last hour and recent crash reports. Obelisk removes your user name from file paths and the device identifiers macOS writes in crash reports. getobelisk.app passes the report to a private channel of Obelisk's Discord server and keeps nothing.
+- **Off by default in Obelisk FX.** **Share game performance** in **Settings → Games** is off by default in Obelisk FX so MetalFX/Frame Generation sessions do not skew upstream benchmarks. You can opt in if you want to contribute, and Expected FPS still displays either way.
+- **Bug reports.** In Obelisk FX, **SOS** on a game's page and **I found a bug** in **Settings → Help** open a pre-filled GitHub issue form directly on [SpecialOperations/Obelisk](https://github.com/SpecialOperations/Obelisk/issues) — nothing is uploaded to upstream `getobelisk.app` or upstream Discord. You can click **Show in Finder** to inspect and attach logs manually.
 
 ## Known limitations
 
@@ -308,19 +309,19 @@ Deleting the app alone leaves your games and settings on the Mac. To remove ever
 
 ## Support
 
-Found a bug or a game that does not work? The quickest way to tell us is from Obelisk: press **SOS** on the game's page, or **I found a bug** in **Settings → Help** for a problem with Obelisk itself. Say what happened, keep **Attach logs** on and send. Obelisk then shows a code. Mention it on [Discord](https://discord.gg/h5a7F4rZ6f), or press **Open a GitHub issue** to get GitHub's bug form with your report already filled in.
+Found a bug or a game that does not work in **Obelisk FX**? Please report it on **this fork's GitHub repository** (not upstream Obelisk or upstream Discord):
 
-You can also [open an issue](https://github.com/Zagrios/obelisk/issues/new?template=bug_report.yml) yourself. The form asks for your Mac, its macOS version, your Obelisk version (shown in **Settings**) and what happened.
+- From inside Obelisk FX: press **SOS** on the game's page, or **I found a bug** in **Settings → Help**. It pre-fills a GitHub bug report on [SpecialOperations/Obelisk](https://github.com/SpecialOperations/Obelisk/issues/new?template=bug_report.yml) and lets you open your log folder in Finder to attach logs.
+- Or [open an issue directly](https://github.com/SpecialOperations/Obelisk/issues/new?template=bug_report.yml).
+- Have an idea? [Request a feature](https://github.com/SpecialOperations/Obelisk/issues/new?template=feature_request.yml), or press **Request a feature** in **Settings → Help**.
 
-Have an idea? [Request a feature](https://github.com/Zagrios/obelisk/issues/new?template=feature_request.yml), or press **Request a feature** in **Settings → Help**.
+Logs help a lot. They are in `~/Library/Logs/Obelisk` (Finder: **Go → Go to Folder…**). Attach the ones of the game you tried, after checking they show nothing you want to keep private.
 
-Logs help a lot. They are in `~/Library/Logs/Obelisk` (Finder: **Go → Go to Folder…**). Attach the ones of the game you tried, after checking they show nothing you want to keep private. A Windows game's log starts with a line that says how Obelisk ran it: its engine, graphics backend, [Voile](https://github.com/Zagrios/voile) release and the launch arguments you added.
-
-Enjoying Obelisk? Star the repository: it helps other Mac players find it.
+Enjoying Obelisk FX? Star [SpecialOperations/Obelisk](https://github.com/SpecialOperations/Obelisk) and the upstream [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk) repository!
 
 ## Credits
 
-Obelisk is developed by [Zagrios](https://github.com/Zagrios)
+Obelisk FX is a community fork maintained by [SpecialOperations](https://github.com/SpecialOperations), based on [Obelisk](https://github.com/Zagrios/Obelisk) by [Zagrios](https://github.com/Zagrios).
 
 It builds on the work of many open-source projects, without which Windows games could not run on a Mac:
 
