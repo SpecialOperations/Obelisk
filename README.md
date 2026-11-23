@@ -4,7 +4,7 @@
   <img src="assets/readme/icon.png" alt="Obelisk icon" width="200" height="200">
   <h1>Obelisk (MetalFX Fork)</h1>
   <p>
-    Community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
+    VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
     Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, and <b>Mic Voice Isolation</b> toggles to Launch Settings for the Linux engine.
   </p>
   <p>
