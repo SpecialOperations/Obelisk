@@ -71,6 +71,88 @@ pub fn take_voile_prereleases(locations: ObeliskLocations, take: bool) -> bool {
     game_runtime::voile::take_prereleases(Path::new(&locations.voile), take).is_ok()
 }
 
+/// Current opt-in and installation state of the optional Proton Experimental
+/// runtime in `Voile/`.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct ProtonExperimentalStatus {
+    /// Whether the player opted in to installing and keeping Proton Experimental.
+    pub enabled: bool,
+    /// Whether Proton Experimental binaries are currently present on disk.
+    pub installed: bool,
+    /// Bytes currently occupied on disk by Proton Experimental (0 if not installed).
+    pub installed_bytes: u64,
+    /// Compressed archive download size in bytes for the current overlay release.
+    pub download_bytes: u64,
+}
+
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum ProtonExperimentalError {
+    #[error("{message}")]
+    Failed { message: String },
+}
+
+fn read_proton_experimental_status(voile: &Path) -> ProtonExperimentalStatus {
+    ProtonExperimentalStatus {
+        enabled: game_runtime::voile::proton_experimental_enabled(voile),
+        installed: game_runtime::voile::proton_experimental_installed(voile),
+        installed_bytes: game_runtime::voile::proton_experimental_disk_bytes(voile),
+        download_bytes: game_runtime::voile::proton_experimental_download_bytes(voile),
+    }
+}
+
+/// Reports whether Proton Experimental is opted in, installed on disk, and how
+/// much space it uses or requires to download.
+#[uniffi::export]
+pub fn proton_experimental_status(locations: ObeliskLocations) -> ProtonExperimentalStatus {
+    read_proton_experimental_status(Path::new(&locations.voile))
+}
+
+/// Persists whether the player opted in to the optional Proton Experimental
+/// runtime without removing already-installed files.
+#[uniffi::export]
+pub fn set_proton_experimental_enabled(
+    locations: ObeliskLocations,
+    enabled: bool,
+) -> Result<ProtonExperimentalStatus, ProtonExperimentalError> {
+    let voile = Path::new(&locations.voile);
+    game_runtime::voile::set_proton_experimental_enabled(voile, enabled).map_err(|err| {
+        ProtonExperimentalError::Failed {
+            message: err.to_string(),
+        }
+    })?;
+    Ok(read_proton_experimental_status(voile))
+}
+
+/// Opts in to Proton Experimental and downloads it immediately if the Linux
+/// engine runtime is already installed.
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn install_proton_experimental(
+    locations: ObeliskLocations,
+) -> Result<ProtonExperimentalStatus, ProtonExperimentalError> {
+    let voile = Path::new(&locations.voile);
+    game_runtime::voile::install_proton_experimental(voile)
+        .await
+        .map_err(|err| ProtonExperimentalError::Failed {
+            message: err.to_string(),
+        })?;
+    Ok(read_proton_experimental_status(voile))
+}
+
+/// Removes the installed Proton Experimental runtime from disk to save space
+/// and turns the opt-in preference off.
+#[uniffi::export]
+pub fn offload_proton_experimental(
+    locations: ObeliskLocations,
+) -> Result<ProtonExperimentalStatus, ProtonExperimentalError> {
+    let voile = Path::new(&locations.voile);
+    game_runtime::voile::offload_proton_experimental(voile).map_err(|err| {
+        ProtonExperimentalError::Failed {
+            message: err.to_string(),
+        }
+    })?;
+    Ok(read_proton_experimental_status(voile))
+}
+
 impl From<&ObeliskLocations> for game_runtime::Locations {
     fn from(locations: &ObeliskLocations) -> Self {
         Self {
@@ -183,5 +265,46 @@ mod tests {
             .unwrap(),
             Path::new("/library/Prefixes/steam-42-windows")
         );
+    }
+
+    #[test]
+    fn proton_experimental_status_toggle_and_offload_bridge() {
+        let directory = tempfile::tempdir().unwrap();
+        let library = directory.path().to_string_lossy().into_owned();
+        let locations = obelisk_locations(library, "/Obelisk.app".into(), "/home".into());
+        let voile = Path::new(&locations.voile);
+
+        let initial = proton_experimental_status(locations.clone());
+        assert!(!initial.enabled);
+        assert!(!initial.installed);
+        assert_eq!(initial.installed_bytes, 0);
+        assert!(initial.download_bytes > 0);
+
+        let enabled = set_proton_experimental_enabled(locations.clone(), true).unwrap();
+        assert!(enabled.enabled);
+        assert!(!enabled.installed);
+
+        // Simulate an installed Proton Experimental runtime in Voile/current.
+        let current = voile.join("current/linux");
+        std::fs::create_dir_all(current.join("engine")).unwrap();
+        std::fs::write(current.join("engine/fexdarwin-run"), "fex").unwrap();
+        std::fs::create_dir_all(current.join("wine/bin")).unwrap();
+        std::fs::write(current.join("wine/bin/wine"), "wine").unwrap();
+        std::fs::create_dir_all(current.join("wine-proton-experimental/bin")).unwrap();
+        std::fs::write(
+            current.join("wine-proton-experimental/bin/wine"),
+            vec![0u8; 2048],
+        )
+        .unwrap();
+
+        let installed = proton_experimental_status(locations.clone());
+        assert!(installed.enabled);
+        assert!(installed.installed);
+        assert_eq!(installed.installed_bytes, 2048);
+
+        let offloaded = offload_proton_experimental(locations).unwrap();
+        assert!(!offloaded.enabled);
+        assert!(!offloaded.installed);
+        assert_eq!(offloaded.installed_bytes, 0);
     }
 }

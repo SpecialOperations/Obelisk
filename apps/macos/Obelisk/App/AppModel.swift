@@ -77,6 +77,8 @@ final class AppModel {
     let estimates: PerformanceEstimates
     /// Obelisk's own new versions.
     let updates: AppUpdates
+    /// Opt-in status and offload controls for Proton Experimental.
+    let protonExperimental: ProtonExperimentalModel
     /// The ways to support Obelisk, which it shows by itself once.
     let support: SupportModel
 
@@ -96,6 +98,7 @@ final class AppModel {
          downloads: DownloadsModel? = nil,
          gamesFolder: GamesFolderModel? = nil,
          performance: PerformanceReports? = nil, estimates: PerformanceEstimates? = nil, updates: AppUpdates? = nil,
+         protonExperimental: ProtonExperimentalModel? = nil,
          support: SupportModel? = nil, thermal: ThermalLog = .shared,
          overlay: GameOverlayEnvironment = AppIdentity.isTestHost ? .inert : .live) {
         libraryDirectory = directory.path
@@ -142,6 +145,8 @@ final class AppModel {
         self.thermal = thermal
         self.estimates = estimates ?? PerformanceEstimates()
         self.updates = updates ?? AppUpdates(defaults: defaults)
+        self.protonExperimental = protonExperimental
+            ?? ProtonExperimentalModel(locations: ObeliskLocations.of(library: directory))
         self.support = support ?? SupportModel(defaults: defaults)
         self.downloads.progress = { [weak self] item in self?.downloadTransfer(item) }
         for section in LibrarySection.storefronts {
@@ -536,5 +541,129 @@ final class AppModel {
         await steam.gameSessions.stop()
         await epic.gameSessions.stop()
         await gog.gameSessions.stop()
+    }
+}
+
+/// Manages opt-in, on-demand installation, and offloading of the optional
+/// Proton Experimental (Wine 11.0) runtime in `Voile/`.
+@MainActor
+@Observable
+final class ProtonExperimentalModel {
+    enum Activity {
+        case installing
+        case offloading
+    }
+
+    private(set) var status: ProtonExperimentalStatus
+    private(set) var activity: Activity?
+    var error: String?
+
+    var isBusy: Bool { activity != nil }
+
+    @ObservationIgnored private let locations: ObeliskLocations
+
+    init(locations: ObeliskLocations = .live) {
+        self.locations = locations
+        if AppIdentity.isTestHost {
+            status = ProtonExperimentalStatus(
+                enabled: false,
+                installed: false,
+                installedBytes: 0,
+                downloadBytes: 140_892_843
+            )
+        } else {
+            status = protonExperimentalStatus(locations: locations)
+        }
+    }
+
+    func refresh() {
+        guard !AppIdentity.isTestHost, !isBusy else { return }
+        let locations = locations
+        Task {
+            let latest = await Task.detached(priority: .utility) {
+                protonExperimentalStatus(locations: locations)
+            }.value
+            if !isBusy {
+                status = latest
+            }
+        }
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        guard !isBusy else { return }
+        if AppIdentity.isTestHost {
+            status = ProtonExperimentalStatus(
+                enabled: enabled,
+                installed: status.installed,
+                installedBytes: status.installedBytes,
+                downloadBytes: status.downloadBytes
+            )
+            return
+        }
+        error = nil
+        let locations = locations
+        if enabled {
+            activity = .installing
+            Task {
+                do {
+                    status = try await installProtonExperimental(locations: locations)
+                } catch {
+                    self.error = Self.message(for: error)
+                    status = await Task.detached(priority: .utility) {
+                        protonExperimentalStatus(locations: locations)
+                    }.value
+                }
+                activity = nil
+            }
+        } else {
+            Task {
+                do {
+                    status = try await Task.detached(priority: .utility) {
+                        try setProtonExperimentalEnabled(locations: locations, enabled: false)
+                    }.value
+                } catch {
+                    self.error = Self.message(for: error)
+                    status = await Task.detached(priority: .utility) {
+                        protonExperimentalStatus(locations: locations)
+                    }.value
+                }
+            }
+        }
+    }
+
+    func offload() {
+        guard !isBusy, status.installed else { return }
+        if AppIdentity.isTestHost {
+            status = ProtonExperimentalStatus(
+                enabled: false,
+                installed: false,
+                installedBytes: 0,
+                downloadBytes: status.downloadBytes
+            )
+            return
+        }
+        error = nil
+        activity = .offloading
+        let locations = locations
+        Task {
+            do {
+                status = try await Task.detached(priority: .utility) {
+                    try offloadProtonExperimental(locations: locations)
+                }.value
+            } catch {
+                self.error = Self.message(for: error)
+                status = await Task.detached(priority: .utility) {
+                    protonExperimentalStatus(locations: locations)
+                }.value
+            }
+            activity = nil
+        }
+    }
+
+    private static func message(for error: any Error) -> String {
+        if case let ProtonExperimentalError.Failed(message) = error {
+            return message.hasPrefix("backend.") ? L10n.string(message) : message
+        }
+        return error.localizedDescription
     }
 }

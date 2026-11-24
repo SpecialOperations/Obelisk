@@ -152,8 +152,15 @@ final class LaunchSettingsModel: Identifiable {
 struct LaunchSettingsSheet: View {
     @Bindable var model: LaunchSettingsModel
     let gameName: String
+    var offersProtonExperimental: Bool = LaunchSettingsSheet.liveOffersProtonExperimental
     @FocusState private var editsArguments: Bool
     @Environment(\.dismiss) private var dismiss
+
+    private static var liveOffersProtonExperimental: Bool {
+        guard !AppIdentity.isTestHost else { return true }
+        let status = protonExperimentalStatus(locations: .live)
+        return status.enabled || status.installed
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -280,7 +287,12 @@ struct LaunchSettingsSheet: View {
     }
 
     private func engineRow(_ settings: LaunchSettings) -> some View {
-        ObeliskRow(title: L10n.string("ui.launch_settings.engine")) {
+        let visibleEngines = settings.engines.filter { offer in
+            offer.engine != .protonExperimental
+                || offersProtonExperimental
+                || settings.engine == .protonExperimental
+        }
+        return ObeliskRow(title: L10n.string("ui.launch_settings.engine")) {
             SymbolTile(name: "gearshape.2.fill", colors: TileColors.violet)
         } detail: {
             Text(Self.detail(of: settings.engine))
@@ -291,7 +303,7 @@ struct LaunchSettingsSheet: View {
                             selection: Binding(get: { settings.engine },
                                                set: { engine in model.choose { $0.engine = engine } }),
                             identifier: "launch-settings-engine") {
-                ForEach(settings.engines, id: \.engine) { offer in
+                ForEach(visibleEngines, id: \.engine) { offer in
                     Text(marked(Self.name(of: offer.engine), isDefault: offer.engine == settings.defaultEngine))
                         .tag(offer.engine)
                 }

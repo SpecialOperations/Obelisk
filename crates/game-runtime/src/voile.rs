@@ -35,6 +35,11 @@ pub(crate) mod fx_overlay;
 use feed::Offered;
 pub(crate) use feed::refresh;
 pub use feed::take_prereleases;
+pub use fx_overlay::{
+    install_proton_experimental, offload_proton_experimental, proton_experimental_disk_bytes,
+    proton_experimental_download_bytes, proton_experimental_enabled,
+    proton_experimental_installed, set_proton_experimental_enabled,
+};
 
 const RELEASE: &str = include_str!("../voile-release.json");
 /// Where install-dev.sh puts a locally built runtime.
@@ -568,6 +573,7 @@ pub fn remove_replaced(root: &Path) {
             && name != feed::KEPT
             && name != feed::PRERELEASES
             && name != fx_overlay::FEED_FILE
+            && name != fx_overlay::PROTON_EXPERIMENTAL_OPT_IN
             && !name.starts_with(UNFINISHED)
     });
 }

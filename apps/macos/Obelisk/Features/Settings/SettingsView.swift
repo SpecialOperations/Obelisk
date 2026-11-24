@@ -57,6 +57,8 @@ struct SettingsView: View {
                             overlay
                             ObeliskCardDivider()
                             sharePerformance
+                            ObeliskCardDivider()
+                            protonExperimental
                         }
                     }
                     GamePageSection(title: L10n.string("ui.settings.storage")) {
@@ -137,6 +139,8 @@ struct SettingsView: View {
                              confirm: model.gamesFolder.confirm)
         }
         .errorAlert(L10n.string("ui.settings.games_folder_failed"), message: Bindable(model.gamesFolder).failure)
+        .errorAlert(L10n.string("ui.settings.proton_experimental_failed"), message: Bindable(model.protonExperimental).error)
+        .onAppear { model.protonExperimental.refresh() }
     }
 
     /// Clearly identifies Obelisk FX as a community fork and points users to
@@ -251,6 +255,68 @@ struct SettingsView: View {
                 .pointerCursor()
                 .accessibilityIdentifier("settings-share-performance")
         }
+    }
+
+    private var protonExperimental: some View {
+        let pe = model.protonExperimental
+        let status = pe.status
+        let gameActive = model.runsGame || !model.custom.runningProcesses.isEmpty
+        return ObeliskRow(title: L10n.string("ui.settings.proton_experimental")) {
+            SymbolTile(name: "testtube.2", colors: TileColors.gold)
+        } detail: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("ui.settings.proton_experimental_description"))
+                Text(protonExperimentalStatusLine(pe))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+            }
+        } accessory: {
+            HStack(spacing: 12) {
+                if pe.isBusy {
+                    ProgressView()
+                        .controlSize(.small)
+                } else if status.installed {
+                    GlassCapsuleButton(title: L10n.string("ui.settings.proton_experimental_offload"),
+                                       systemImage: "trash",
+                                       identifier: "settings-proton-experimental-offload") {
+                        pe.offload()
+                    }
+                    .disabled(gameActive)
+                    .help(L10n.string("ui.settings.proton_experimental_offload_help"))
+                }
+                Toggle(L10n.string("ui.settings.proton_experimental"),
+                       isOn: Binding(get: { status.enabled },
+                                     set: { pe.setEnabled($0) }))
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .pointerCursor()
+                    .disabled(pe.isBusy || gameActive)
+                    .accessibilityIdentifier("settings-proton-experimental")
+            }
+        }
+    }
+
+    private func protonExperimentalStatusLine(_ pe: ProtonExperimentalModel) -> String {
+        switch pe.activity {
+        case .installing:
+            return L10n.string("ui.settings.proton_experimental_downloading")
+        case .offloading:
+            return L10n.string("ui.settings.proton_experimental_offloading")
+        case nil:
+            break
+        }
+        let status = pe.status
+        if status.installed {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(status.installedBytes), countStyle: .file)
+            return status.enabled
+                ? L10n.string("ui.settings.proton_experimental_installed_size", size)
+                : L10n.string("ui.settings.proton_experimental_installed_opt_out_size", size)
+        }
+        if status.enabled {
+            return L10n.string("ui.settings.proton_experimental_pending")
+        }
+        let size = ByteCountFormatter.string(fromByteCount: Int64(status.downloadBytes), countStyle: .file)
+        return L10n.string("ui.settings.proton_experimental_download_size", size)
     }
 
     private var overlay: some View {

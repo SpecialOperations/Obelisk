@@ -25,6 +25,9 @@ const RELEASES_API: &str = "https://api.github.com/repos/SpecialOperations/voile
 const USER_AGENT: &str = "Obelisk-FX";
 /// Cached overlay release metadata inside `Voile/`.
 pub(super) const FEED_FILE: &str = "fx-overlay-feed.json";
+/// Marker file inside `Voile/` recording that the player opted in to the
+/// optional Proton Experimental runtime.
+pub(super) const PROTON_EXPERIMENTAL_OPT_IN: &str = "proton-experimental";
 /// Marker file placed inside `Voile/current/` when managed by Obelisk FX.
 /// A `Voile/current/` directory without this marker is treated as a manual
 /// developer runtime and left untouched.
@@ -57,6 +60,8 @@ pub(crate) struct OverlayRelease {
 struct OverlayStamp {
     tag: String,
     base_voile: String,
+    #[serde(default)]
+    proton_experimental: bool,
 }
 
 /// Built-in pinned fallback for `v0.1.8-metalfx` so Obelisk FX can download
@@ -128,6 +133,201 @@ pub(crate) fn is_managed(voile_root: &Path) -> bool {
     read_stamp(&voile_root.join(DEVELOPMENT)).is_some()
 }
 
+/// Whether the player opted in to installing and keeping the optional Proton
+/// Experimental runtime (off by default).
+pub fn proton_experimental_enabled(voile_root: &Path) -> bool {
+    voile_root.join(PROTON_EXPERIMENTAL_OPT_IN).is_file()
+}
+
+/// Records whether the player opted in to the optional Proton Experimental
+/// runtime.
+pub fn set_proton_experimental_enabled(voile_root: &Path, enabled: bool) -> std::io::Result<()> {
+    let marker = voile_root.join(PROTON_EXPERIMENTAL_OPT_IN);
+    if enabled {
+        fs::create_dir_all(voile_root)?;
+        fs::write(marker, b"")
+    } else {
+        match fs::remove_file(marker) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err),
+        }
+    }
+}
+
+fn proton_experimental_dir(voile_root: &Path) -> PathBuf {
+    crate::voile::linux_runtime(voile_root)
+        .unwrap_or_else(|| voile_root.join(DEVELOPMENT).join("linux"))
+        .join("wine-proton-experimental")
+}
+
+/// Whether Proton Experimental binaries are currently installed on disk.
+pub fn proton_experimental_installed(voile_root: &Path) -> bool {
+    proton_experimental_dir(voile_root).join("bin/wine").is_file()
+}
+
+fn dir_size_bytes(path: &Path) -> u64 {
+    let Ok(meta) = fs::symlink_metadata(path) else {
+        return 0;
+    };
+    if meta.file_type().is_symlink() {
+        return 0;
+    }
+    if meta.is_file() {
+        return meta.len();
+    }
+    if !meta.is_dir() {
+        return 0;
+    }
+    let Ok(entries) = fs::read_dir(path) else {
+        return 0;
+    };
+    entries
+        .flatten()
+        .map(|entry| dir_size_bytes(&entry.path()))
+        .sum()
+}
+
+/// Bytes occupied on disk by the installed Proton Experimental runtime (0 if
+/// not installed).
+pub fn proton_experimental_disk_bytes(voile_root: &Path) -> u64 {
+    let dir = proton_experimental_dir(voile_root);
+    if !dir.join("bin/wine").is_file() {
+        return 0;
+    }
+    dir_size_bytes(&dir)
+}
+
+/// Compressed archive size in bytes for the optional Proton Experimental
+/// runtime in the current overlay release.
+pub fn proton_experimental_download_bytes(voile_root: &Path) -> u64 {
+    wanted(voile_root)
+        .proton_experimental
+        .map_or(0, |asset| asset.size)
+}
+
+fn update_stamp_proton_experimental(voile_root: &Path, installed: bool) {
+    let current = voile_root.join(DEVELOPMENT);
+    let Some(mut stamp) = read_stamp(&current) else {
+        return;
+    };
+    stamp.proton_experimental = installed;
+    if let Ok(bytes) = serde_json::to_vec_pretty(&stamp) {
+        let _ = fs::write(current.join(STAMP_FILE), bytes);
+    }
+}
+
+/// Removes the installed Proton Experimental runtime from disk to reclaim
+/// storage space and clears the opt-in preference so future overlay updates do
+/// not re-download it. Returns the number of bytes freed.
+pub fn offload_proton_experimental(voile_root: &Path) -> std::io::Result<u64> {
+    let dir = proton_experimental_dir(voile_root);
+    let freed = dir_size_bytes(&dir);
+    for candidate in [
+        dir,
+        voile_root
+            .join(DEVELOPMENT)
+            .join("linux/wine-proton-experimental"),
+    ] {
+        match fs::remove_dir_all(&candidate) {
+            Ok(()) => {}
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+            Err(err) => return Err(err),
+        }
+    }
+    set_proton_experimental_enabled(voile_root, false)?;
+    update_stamp_proton_experimental(voile_root, false);
+    Ok(freed)
+}
+
+/// Opts in to Proton Experimental and, if the Linux engine runtime is already
+/// installed, downloads and extracts only the Proton Experimental archive right
+/// away without re-downloading the rest of Voile.
+pub async fn install_proton_experimental(voile_root: &Path) -> Result<(), Failure> {
+    let _installing = super::INSTALLING.lock().await;
+    if proton_experimental_installed(voile_root) {
+        set_proton_experimental_enabled(voile_root, true)?;
+        update_stamp_proton_experimental(voile_root, true);
+        return Ok(());
+    }
+    let Some(linux_dir) = crate::voile::linux_runtime(voile_root) else {
+        // Base Voile is not installed yet; record opt-in so the first overlay
+        // install includes Proton Experimental automatically.
+        set_proton_experimental_enabled(voile_root, true)?;
+        return Ok(());
+    };
+
+    refresh(voile_root).await;
+    let asset = wanted(voile_root)
+        .proton_experimental
+        .ok_or(Failure::Download)?;
+
+    fs::create_dir_all(voile_root)?;
+    let work = tempfile::Builder::new()
+        .prefix(UNFINISHED)
+        .tempdir_in(voile_root)?;
+    let client = reqwest::Client::builder()
+        .https_only(true)
+        .user_agent(USER_AGENT)
+        .connect_timeout(Duration::from_secs(20))
+        .read_timeout(Duration::from_secs(60))
+        .build()
+        .map_err(|_| Failure::Download)?;
+    let progress = Install::new();
+    let mut received = 0_u64;
+    let tarball = download_asset(
+        &client,
+        &asset,
+        work.path(),
+        "wine-proton-experimental.tar.gz",
+        &progress,
+        &mut received,
+        asset.size,
+    )
+    .await?;
+
+    let voile_root = voile_root.to_owned();
+    tokio::task::spawn_blocking(move || {
+        let staging_parent = tempfile::Builder::new()
+            .prefix(UNFINISHED)
+            .tempdir_in(&linux_dir)?;
+        let staged = staging_parent.path().join("wine-proton-experimental");
+        fs::create_dir_all(&staged)?;
+        let status = std::process::Command::new("/usr/bin/tar")
+            .arg("-xzf")
+            .arg(&tarball)
+            .arg("-C")
+            .arg(&staged)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if !status.success() || !staged.join("bin/wine").is_file() {
+            return Err(Failure::Damaged);
+        }
+        let dst = linux_dir.join("wine-proton-experimental");
+        let old = if dst.exists() {
+            let old = staging_parent.path().join("old-proton-experimental");
+            fs::rename(&dst, &old)?;
+            Some(old)
+        } else {
+            None
+        };
+        if let Err(err) = fs::rename(&staged, &dst) {
+            if let Some(old) = old {
+                let _ = fs::rename(old, &dst);
+            }
+            return Err(err.into());
+        }
+        drop(staging_parent);
+        set_proton_experimental_enabled(&voile_root, true)?;
+        update_stamp_proton_experimental(&voile_root, true);
+        Ok(())
+    })
+    .await
+    .map_err(|_| Failure::Storage)?
+}
+
 fn read_stamp(current_dir: &Path) -> Option<OverlayStamp> {
     let bytes = fs::read(current_dir.join(STAMP_FILE)).ok()?;
     serde_json::from_slice(&bytes).ok()
@@ -197,7 +397,10 @@ pub(crate) fn needs_install(voile_root: &Path) -> bool {
         let wanted = wanted(voile_root);
         let base_matches = base_name.as_deref().is_none_or(|b| b == stamp.base_voile);
         let wsd_present = current.join("linux/engine/wsd").is_file();
-        !(stamp.tag == wanted.tag && base_matches && wsd_present)
+        let pe_ok = !proton_experimental_enabled(voile_root)
+            || wanted.proton_experimental.is_none()
+            || (stamp.proton_experimental && proton_experimental_installed(voile_root));
+        !(stamp.tag == wanted.tag && base_matches && wsd_present && pe_ok)
     } else {
         // No Voile/current yet: apply overlay as soon as a base Voile with Linux engine exists.
         base_name.is_some_and(|name| {
@@ -385,7 +588,8 @@ pub(crate) async fn install(
     let wine_compat = has_compatible_wine_ffmpeg(&base_dir);
     let want_gst_root = wine_compat && overlay.gst_rtsp_root.is_some();
     let want_wine = wine_compat && overlay.wine_media_clipboard.is_some();
-    let want_proton_exp = overlay.proton_experimental.is_some();
+    let want_proton_exp =
+        proton_experimental_enabled(voile_root) && overlay.proton_experimental.is_some();
 
     let mut total = overlay.wsd.size;
     if let Some(a) = &overlay.fexdarwin_run {
@@ -822,6 +1026,7 @@ fn apply_staged_inner(
     let stamp = OverlayStamp {
         tag: tag.to_owned(),
         base_voile: base_version.to_owned(),
+        proton_experimental: files.proton_experimental.is_some(),
     };
     fs::write(
         staged.join(STAMP_FILE),
@@ -1096,5 +1301,61 @@ mod tests {
         assert_eq!(fs::read_to_string(sys32.join("winedmo.dll")).unwrap(), "dmo64");
         assert_eq!(fs::read_to_string(syswow64.join("winedmo.dll")).unwrap(), "dmo32");
         assert!(!needs_install(&root));
+    }
+
+    #[test]
+    fn proton_experimental_is_opt_in_and_offloads_cleanly() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("Voile");
+        fake_base_voile(&root, "v26.3.0-26");
+
+        // Opt-in is OFF by default.
+        assert!(!proton_experimental_enabled(&root));
+        assert!(!proton_experimental_installed(&root));
+        assert_eq!(proton_experimental_disk_bytes(&root), 0);
+        assert!(proton_experimental_download_bytes(&root) > 0);
+
+        // Managed current without Proton Experimental is up-to-date while opt-in is OFF.
+        fs::create_dir_all(root.join("current/bin")).unwrap();
+        fs::write(root.join("current/bin/wine"), "wine").unwrap();
+        fs::create_dir_all(root.join("current/linux/engine")).unwrap();
+        fs::write(root.join("current/linux/engine/wsd"), "wsd").unwrap();
+        fs::write(root.join("current/linux/engine/fexdarwin-run"), "fex").unwrap();
+        fs::create_dir_all(root.join("current/linux/wine/bin")).unwrap();
+        fs::write(root.join("current/linux/wine/bin/wine"), "wine").unwrap();
+        fs::write(
+            root.join("current").join(STAMP_FILE),
+            format!(
+                r#"{{"tag":"{}","base_voile":"v26.3.0-26","proton_experimental":false}}"#,
+                built_in().tag
+            ),
+        )
+        .unwrap();
+        assert!(!needs_install(&root));
+
+        // Turning opt-in ON marks the overlay as needing Proton Experimental.
+        set_proton_experimental_enabled(&root, true).unwrap();
+        assert!(proton_experimental_enabled(&root));
+        assert!(needs_install(&root));
+
+        // Simulate Proton Experimental being installed on disk.
+        let pe = root.join("current/linux/wine-proton-experimental");
+        fs::create_dir_all(pe.join("bin")).unwrap();
+        fs::write(pe.join("bin/wine"), vec![0u8; 4096]).unwrap();
+        fs::write(pe.join("extra.bin"), vec![1u8; 8192]).unwrap();
+        update_stamp_proton_experimental(&root, true);
+        assert!(proton_experimental_installed(&root));
+        assert_eq!(proton_experimental_disk_bytes(&root), 4096 + 8192);
+        assert!(!needs_install(&root));
+
+        // Offloading removes the directory, disables opt-in, updates stamp, and keeps needs_install false.
+        let freed = offload_proton_experimental(&root).unwrap();
+        assert_eq!(freed, 4096 + 8192);
+        assert!(!proton_experimental_installed(&root));
+        assert!(!proton_experimental_enabled(&root));
+        assert_eq!(proton_experimental_disk_bytes(&root), 0);
+        assert!(!pe.exists());
+        assert!(!needs_install(&root));
+        assert!(!read_stamp(&root.join("current")).unwrap().proton_experimental);
     }
 }

@@ -278,6 +278,11 @@ final class CustomGamesModel {
         isDefaultWineInstalled(locations: locations)
     }
 
+    var offersProtonExperimental: Bool {
+        let status = protonExperimentalStatus(locations: locations)
+        return status.enabled || status.installed
+    }
+
     func downloadEngine() async {
         guard !isDownloadingEngine else { return }
         isDownloadingEngine = true

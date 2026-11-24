@@ -97,7 +97,9 @@ struct CustomLaunchSettingsSheet: View {
                     Picker(selection: $engine) {
                         Text(L10n.string("ui.custom.engine_rosetta")).tag(LaunchEngine.rosetta)
                         Text(L10n.string("ui.custom.engine_linux")).tag(LaunchEngine.linux)
-                        Text(L10n.string("ui.custom.engine_proton_experimental")).tag(LaunchEngine.protonExperimental)
+                        if model.offersProtonExperimental || engine == .protonExperimental {
+                            Text(L10n.string("ui.custom.engine_proton_experimental")).tag(LaunchEngine.protonExperimental)
+                        }
                     } label: {
                         EmptyView()
                     }

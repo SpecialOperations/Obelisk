@@ -7141,6 +7141,96 @@ public func FfiConverterTypeObeliskLocations_lower(_ value: ObeliskLocations) ->
 
 
 /**
+ * Current opt-in and installation state of the optional Proton Experimental
+ * runtime in `Voile/`.
+ */
+public struct ProtonExperimentalStatus: Equatable, Hashable {
+    /**
+     * Whether the player opted in to installing and keeping Proton Experimental.
+     */
+    public var enabled: Bool
+    /**
+     * Whether Proton Experimental binaries are currently present on disk.
+     */
+    public var installed: Bool
+    /**
+     * Bytes currently occupied on disk by Proton Experimental (0 if not installed).
+     */
+    public var installedBytes: UInt64
+    /**
+     * Compressed archive download size in bytes for the current overlay release.
+     */
+    public var downloadBytes: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Whether the player opted in to installing and keeping Proton Experimental.
+         */enabled: Bool, 
+        /**
+         * Whether Proton Experimental binaries are currently present on disk.
+         */installed: Bool, 
+        /**
+         * Bytes currently occupied on disk by Proton Experimental (0 if not installed).
+         */installedBytes: UInt64, 
+        /**
+         * Compressed archive download size in bytes for the current overlay release.
+         */downloadBytes: UInt64) {
+        self.enabled = enabled
+        self.installed = installed
+        self.installedBytes = installedBytes
+        self.downloadBytes = downloadBytes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ProtonExperimentalStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProtonExperimentalStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProtonExperimentalStatus {
+        return
+            try ProtonExperimentalStatus(
+                enabled: FfiConverterBool.read(from: &buf), 
+                installed: FfiConverterBool.read(from: &buf), 
+                installedBytes: FfiConverterUInt64.read(from: &buf), 
+                downloadBytes: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProtonExperimentalStatus, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.enabled, into: &buf)
+        FfiConverterBool.write(value.installed, into: &buf)
+        FfiConverterUInt64.write(value.installedBytes, into: &buf)
+        FfiConverterUInt64.write(value.downloadBytes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProtonExperimentalStatus_lift(_ buf: RustBuffer) throws -> ProtonExperimentalStatus {
+    return try FfiConverterTypeProtonExperimentalStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProtonExperimentalStatus_lower(_ value: ProtonExperimentalStatus) -> RustBuffer {
+    return FfiConverterTypeProtonExperimentalStatus.lower(value)
+}
+
+
+/**
  * A game whose Transfer waits in the download queue.
  */
 public struct QueuedTransfer: Equatable, Hashable {
@@ -11596,6 +11686,81 @@ public func FfiConverterTypeOnlineStatus_lower(_ value: OnlineStatus) -> RustBuf
 
 
 
+public 
+enum ProtonExperimentalError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case Failed(message: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension ProtonExperimentalError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProtonExperimentalError: FfiConverterRustBuffer {
+    typealias SwiftType = ProtonExperimentalError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProtonExperimentalError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Failed(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ProtonExperimentalError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Failed(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProtonExperimentalError_lift(_ buf: RustBuffer) throws -> ProtonExperimentalError {
+    return try FfiConverterTypeProtonExperimentalError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProtonExperimentalError_lower(_ value: ProtonExperimentalError) -> RustBuffer {
+    return FfiConverterTypeProtonExperimentalError.lower(value)
+}
+
+
 /**
  * A runtime a launch downloads before its game is prepared.
  */
@@ -15076,6 +15241,24 @@ public func endOrphanedWindowsGames(locations: ObeliskLocations) -> UInt32  {
 })
 }
 /**
+ * Opts in to Proton Experimental and downloads it immediately if the Linux
+ * engine runtime is already installed.
+ */
+public func installProtonExperimental(locations: ObeliskLocations)async throws  -> ProtonExperimentalStatus  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_obelisk_bridge_fn_func_install_proton_experimental(FfiConverterTypeObeliskLocations_lower(locations)
+                )
+            },
+            pollFunc: ffi_obelisk_bridge_rust_future_poll_rust_buffer,
+            completeFunc: ffi_obelisk_bridge_rust_future_complete_rust_buffer,
+            freeFunc: ffi_obelisk_bridge_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeProtonExperimentalStatus_lift,
+            errorHandler: FfiConverterTypeProtonExperimentalError_lift
+        )
+}
+/**
  * The Voile release Windows games run in now, once one is installed. Bug
  * reports name it.
  */
@@ -15094,6 +15277,43 @@ public func obeliskLocations(library: String, bundle: String, home: String) -> O
         FfiConverterString.lower(library),
         FfiConverterString.lower(bundle),
         FfiConverterString.lower(home),uniffiCallStatus
+    )
+})
+}
+/**
+ * Removes the installed Proton Experimental runtime from disk to save space
+ * and turns the opt-in preference off.
+ */
+public func offloadProtonExperimental(locations: ObeliskLocations)throws  -> ProtonExperimentalStatus  {
+    return try  FfiConverterTypeProtonExperimentalStatus_lift(try rustCallWithError(FfiConverterTypeProtonExperimentalError_lift) {
+        uniffiCallStatus in
+    uniffi_obelisk_bridge_fn_func_offload_proton_experimental(
+        FfiConverterTypeObeliskLocations_lower(locations),uniffiCallStatus
+    )
+})
+}
+/**
+ * Reports whether Proton Experimental is opted in, installed on disk, and how
+ * much space it uses or requires to download.
+ */
+public func protonExperimentalStatus(locations: ObeliskLocations) -> ProtonExperimentalStatus  {
+    return try!  FfiConverterTypeProtonExperimentalStatus_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_obelisk_bridge_fn_func_proton_experimental_status(
+        FfiConverterTypeObeliskLocations_lower(locations),uniffiCallStatus
+    )
+})
+}
+/**
+ * Persists whether the player opted in to the optional Proton Experimental
+ * runtime without removing already-installed files.
+ */
+public func setProtonExperimentalEnabled(locations: ObeliskLocations, enabled: Bool)throws  -> ProtonExperimentalStatus  {
+    return try  FfiConverterTypeProtonExperimentalStatus_lift(try rustCallWithError(FfiConverterTypeProtonExperimentalError_lift) {
+        uniffiCallStatus in
+    uniffi_obelisk_bridge_fn_func_set_proton_experimental_enabled(
+        FfiConverterTypeObeliskLocations_lower(locations),
+        FfiConverterBool.lower(enabled),uniffiCallStatus
     )
 })
 }
@@ -15222,10 +15442,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_obelisk_bridge_checksum_func_end_orphaned_windows_games() != 9000) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_obelisk_bridge_checksum_func_install_proton_experimental() != 49482) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_obelisk_bridge_checksum_func_installed_voile_release() != 5445) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_obelisk_bridge_checksum_func_obelisk_locations() != 18961) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_obelisk_bridge_checksum_func_offload_proton_experimental() != 43022) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_obelisk_bridge_checksum_func_proton_experimental_status() != 19246) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_obelisk_bridge_checksum_func_set_proton_experimental_enabled() != 18276) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_obelisk_bridge_checksum_func_take_voile_prereleases() != 22977) {
