@@ -4,7 +4,7 @@
   <img src="assets/readme/icon.png" alt="Obelisk FX icon" width="200" height="200">
   <h1>Obelisk FX</h1>
   <p>
-    Play Windows PC games on your Mac without a SteamOS virtual machine! VRChat focused community fork of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
+    Play Windows PC games on your Mac without a SteamOS virtual machine! <b>VRChat focused community fork<b> of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
     Adds per-game <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime & app updates.
   </p>
   <p>
