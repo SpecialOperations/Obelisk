@@ -59,14 +59,14 @@ struct OverlayStamp {
     base_voile: String,
 }
 
-/// Built-in pinned fallback for `v0.1.7-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.8-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.7-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.8-metalfx";
     OverlayRelease {
-        tag: "v0.1.7-metalfx".into(),
+        tag: "v0.1.8-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
             size: 250_624,
@@ -80,12 +80,12 @@ fn built_in() -> OverlayRelease {
         virgl_render_server: Some(OverlayAsset {
             url: format!("{BASE}/virgl_render_server-arm64"),
             size: 1_634_688,
-            sha256: "7f456756f910467b297458ed15b9ecccd91e480afd5f0b4688ffa22e13d2c55b".into(),
+            sha256: "dedb55d8c9f7f8e19362ac2de5e16d90cfeeff31b9af4817a93d93ba62874584".into(),
         }),
         libvirglrenderer: Some(OverlayAsset {
             url: format!("{BASE}/libvirglrenderer.1.dylib-arm64"),
             size: 2_066_464,
-            sha256: "6c482e83d45da214d8951a216b125d01c14e3476535df34fd18e49c5d4bb724e".into(),
+            sha256: "1dd8d493539ad70f7e0a91a7d8e675ca8937a284ea7ed9d91cfca364d47ec639".into(),
         }),
         neptune_windows: Some(OverlayAsset {
             url: format!("{BASE}/neptune-windows-x86_64.tar.gz"),
@@ -936,7 +936,7 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.7-metalfx");
+        assert_eq!(rel.tag, "v0.1.8-metalfx");
         assert!(rel.neptune_windows.is_some());
         assert!(rel.gst_rtsp_root.is_some());
         assert!(rel.proton_experimental.is_some());
@@ -1065,7 +1065,7 @@ mod tests {
             wine_media_clipboard: Some(tarball),
             proton_experimental: None,
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.7-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.8-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(
