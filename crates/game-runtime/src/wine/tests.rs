@@ -157,7 +157,7 @@ fn windows_side(config: &Config, target: &Target) -> (Vec<String>, Vec<(String, 
             target.arguments.clone(),
             target.environment.clone().into_iter().collect(),
         ),
-        Engine::Linux => (
+        Engine::Linux | Engine::ProtonExperimental => (
             guest_command(target).to_vec(),
             options(target, "--env")
                 .into_iter()
@@ -352,7 +352,7 @@ fn a_profile_s_variables_and_dll_overrides_take_effect_on_either_engine() {
         );
         let own = match offer.engine {
             Engine::Rosetta => "mscoree,mshtml=;winemenubuilder.exe=d",
-            Engine::Linux => "mscoree,mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n",
+            Engine::Linux | Engine::ProtonExperimental => "mscoree,mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n",
         };
         assert_eq!(
             last("WINEDLLOVERRIDES"),
@@ -515,7 +515,7 @@ fn a_private_file_is_read_through_the_z_drive_on_rosetta_and_from_the_c_drive_on
 
         let file = match config.settings.engine {
             Engine::Rosetta => PathBuf::from(path.strip_prefix("Z:").unwrap().replace('\\', "/")),
-            Engine::Linux => config
+            Engine::Linux | Engine::ProtonExperimental => config
                 .prefix
                 .join("drive_c")
                 .join(path.strip_prefix("C:\\").unwrap().replace('\\', "/")),

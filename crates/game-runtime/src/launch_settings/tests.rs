@@ -274,7 +274,7 @@ fn the_view_shows_each_engine_s_defaults_and_the_player_s_choices() {
     assert_eq!(view.default_engine, Engine::Linux);
     assert_eq!(
         view.default_graphics,
-        [Graphics::D3DMetal, Graphics::D3DMetal]
+        [Graphics::D3DMetal, Graphics::D3DMetal, Graphics::Dxmt]
     );
 }
 
@@ -806,7 +806,7 @@ fn the_engine_alone_is_the_launch_settings_engine() {
         );
         let other = match engine_without_choice {
             Engine::Rosetta => Engine::Linux,
-            Engine::Linux => Engine::Rosetta,
+            Engine::Linux | Engine::ProtonExperimental => Engine::Rosetta,
         };
         let choices = Choices {
             engine: Some(other),

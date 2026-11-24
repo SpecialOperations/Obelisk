@@ -60,6 +60,7 @@ pub fn launch_custom_executable(
     let engine = match config.engine {
         LaunchEngine::Rosetta => Engine::Rosetta,
         LaunchEngine::Linux => Engine::Linux,
+        LaunchEngine::ProtonExperimental => Engine::ProtonExperimental,
     };
     let graphics = match config.graphics {
         LaunchGraphics::D3dMetal => Graphics::D3DMetal,
@@ -149,6 +150,7 @@ pub fn recommended_engine_backend(executable_path: String) -> LaunchEngine {
     match custom::recommended_engine(path) {
         Engine::Rosetta => LaunchEngine::Rosetta,
         Engine::Linux => LaunchEngine::Linux,
+        Engine::ProtonExperimental => LaunchEngine::ProtonExperimental,
     }
 }
 

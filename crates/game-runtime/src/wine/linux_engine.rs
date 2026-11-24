@@ -67,8 +67,6 @@ const HOST_PID: &str = "steam-hostpid.so";
 const PREFIX: &str = "prefix";
 /// Neptune's Direct3D, which replaces Wine's in the prefix.
 const DIRECT3D: [&str; 3] = ["d3d11.dll", "dxgi.dll", "d3d12.dll"];
-/// Wine's own 64-bit DLLs, in the runtime.
-const WINE_DLLS: &str = "wine/lib/wine/x86_64-windows";
 /// The one of them that hands Neptune's Direct3D to the render server; a
 /// prefix's system32 holds a copy. A game without either ends once its
 /// Direct3D fails to load, with nothing said.
@@ -84,8 +82,38 @@ const TRANSLATION_TIMEOUT: Duration = Duration::from_secs(2 * 60);
 /// gives them a second.
 const LAUNCHER_GRACE: Duration = Duration::from_secs(2);
 
-/// Voile's Linux engine.
+/// Voile's Linux engine (`voile-wine`).
 pub(super) struct LinuxEngine;
+
+/// Valve's Proton Experimental (Wine 11.0) built with Obelisk's Voile drivers.
+pub(super) struct ProtonExperimentalEngine;
+
+/// Which Wine tree inside `linux/` backs this engine.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Variant {
+    Voile,
+    ProtonExperimental,
+}
+
+impl Variant {
+    fn wine_subdir(self) -> &'static str {
+        match self {
+            Self::Voile => "wine",
+            Self::ProtonExperimental => "wine-proton-experimental",
+        }
+    }
+
+    fn prefix_suffix(self) -> &'static str {
+        match self {
+            Self::Voile => "-linux",
+            Self::ProtonExperimental => "-proton-experimental",
+        }
+    }
+
+    fn wine_dlls(self) -> String {
+        format!("{}/lib/wine/x86_64-windows", self.wine_subdir())
+    }
+}
 
 static FACTS: Facts = Facts {
     name: "wine-linux",
@@ -119,6 +147,101 @@ static FACTS: Facts = Facts {
     },
     programs: Programs::X86_64,
 };
+
+static PROTON_EXP_FACTS: Facts = Facts {
+    name: "proton-experimental",
+    input_service: None,
+    graphics: Graphics::Dxmt,
+    launcher_grace: Some(LAUNCHER_GRACE),
+    reserved: FACTS.reserved,
+    programs: Programs::X86_64,
+};
+
+fn variant_of(config: &Config) -> Variant {
+    match config.settings.engine {
+        super::Engine::ProtonExperimental => Variant::ProtonExperimental,
+        _ => Variant::Voile,
+    }
+}
+
+impl Adapter for ProtonExperimentalEngine {
+    fn facts(&self) -> &'static Facts {
+        &PROTON_EXP_FACTS
+    }
+
+    fn architecture(&self, config: &Config) -> Architecture {
+        LinuxEngine.architecture(config)
+    }
+
+    fn runtime(&self, voile: &Path) -> Option<PathBuf> {
+        LinuxEngine.runtime(voile)
+    }
+
+    fn prefix(&self, rosetta: &Path) -> Result<PathBuf, Error> {
+        prefix_for(rosetta, Variant::ProtonExperimental)
+    }
+
+    fn ready(
+        &self,
+        config: &Config,
+        locations: &crate::Locations,
+        storefront: &dyn Furnisher,
+    ) -> Result<(), Error> {
+        LinuxEngine.ready(config, locations, storefront)
+    }
+
+    fn target(
+        &self,
+        config: &Config,
+        game: &Game<'_>,
+        launched: &LaunchTarget,
+        program: PathBuf,
+        additions: Additions,
+        environment: HashMap<String, String>,
+    ) -> Result<Target, Error> {
+        LinuxEngine.target(config, game, launched, program, additions, environment)
+    }
+
+    fn private_file(
+        &self,
+        config: &Config,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<(tempfile::TempDir, String), Error> {
+        LinuxEngine.private_file(config, name, bytes)
+    }
+
+    fn quit_command(
+        &self,
+        config: &Config,
+        environment: &HashMap<String, String>,
+        program: Option<&Path>,
+        pid: u32,
+    ) -> Option<Command> {
+        LinuxEngine.quit_command(config, environment, program, pid)
+    }
+
+    fn end_command(&self, config: &Config) -> Option<Command> {
+        LinuxEngine.end_command(config)
+    }
+
+    fn private_folders(
+        &self,
+        config: &Config,
+        environment: &HashMap<String, String>,
+        pid: Option<u32>,
+    ) -> Vec<PathBuf> {
+        LinuxEngine.private_folders(config, environment, pid)
+    }
+
+    fn remove(
+        &self,
+        locations: &crate::Locations,
+        prefix: &Path,
+    ) -> Result<(), obelisk_core::installation::RemovalFailure> {
+        LinuxEngine.remove(locations, prefix)
+    }
+}
 
 impl Adapter for LinuxEngine {
     fn facts(&self) -> &'static Facts {
@@ -163,8 +286,9 @@ impl Adapter for LinuxEngine {
         if !installed(config) {
             return Err(Error::WineUnavailable);
         }
+        let variant = variant_of(config);
         let direct3d = DIRECT3D.map(|library| config.runtime.join("windows").join(library));
-        let neptune = config.runtime.join(WINE_DLLS).join(NEPTUNE);
+        let neptune = config.runtime.join(variant.wine_dlls()).join(NEPTUNE);
         if !direct3d.iter().chain([&neptune]).all(|file| file.is_file()) {
             return Err(Error::WineIncomplete);
         }
@@ -229,6 +353,17 @@ impl Adapter for LinuxEngine {
             "--graphics".to_owned(),
             config.settings.graphics.name().to_owned(),
         ];
+        let variant = variant_of(config);
+        if variant != Variant::Voile {
+            arguments.push("--wine".to_owned());
+            arguments.push(
+                config
+                    .runtime
+                    .join(variant.wine_subdir())
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+        }
         // Without it, the window server shows all of the screen's pixels.
         if config.settings.render_percent != crate::launch_settings::FULL_RENDER_PERCENT {
             arguments.push("--render-percent".to_owned());
@@ -354,9 +489,13 @@ impl Adapter for LinuxEngine {
 /// `rosetta`: its own folder beside it, the prefix inside, since the guest
 /// sees that folder as its home.
 fn prefix(rosetta: &Path) -> Result<PathBuf, Error> {
+    prefix_for(rosetta, Variant::Voile)
+}
+
+fn prefix_for(rosetta: &Path, variant: Variant) -> Result<PathBuf, Error> {
     let name = rosetta.file_name().ok_or(Error::Storage)?;
     let mut home = name.to_owned();
-    home.push("-linux");
+    home.push(variant.prefix_suffix());
     Ok(rosetta.with_file_name(home).join(PREFIX))
 }
 
@@ -367,7 +506,14 @@ fn home(prefix: &Path) -> Result<&Path, Error> {
 
 /// Whether the runtime is in place.
 fn installed(config: &Config) -> bool {
+    let variant = variant_of(config);
     config.runtime.join("engine/fexdarwin-run").is_file()
+        && (variant == Variant::Voile
+            || config
+                .runtime
+                .join(variant.wine_subdir())
+                .join("bin/wine")
+                .is_file())
 }
 
 /// What every Wine command of the engine runs with in the guest, then the
@@ -453,8 +599,12 @@ fn boot(config: &Config) -> Result<(), Error> {
 
 /// The engine's folders as the guest sees them; a launch adds the game.
 fn binds(config: &Config, install: Option<&Path>) -> Result<String, Error> {
+    let variant = variant_of(config);
     let mut binds = vec![
-        format!("/opt/wine={}:ro", config.runtime.join("wine").display()),
+        format!(
+            "/opt/wine={}:ro",
+            config.runtime.join(variant.wine_subdir()).display()
+        ),
         format!("{HOME}={}", home(&config.prefix)?.display()),
     ];
     if let Some(install) = install {

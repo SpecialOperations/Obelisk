@@ -49,6 +49,8 @@ pub(crate) struct OverlayRelease {
     #[serde(default)]
     pub gst_rtsp_root: Option<OverlayAsset>,
     pub wine_media_clipboard: Option<OverlayAsset>,
+    #[serde(default)]
+    pub proton_experimental: Option<OverlayAsset>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -57,18 +59,18 @@ struct OverlayStamp {
     base_voile: String,
 }
 
-/// Built-in pinned fallback for `v0.1.6-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.7-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.6-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.7-metalfx";
     OverlayRelease {
-        tag: "v0.1.6-metalfx".into(),
+        tag: "v0.1.7-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
-            size: 249_568,
-            sha256: "b6b8287231c85c9c373986afa979af68c8325a2c02c35c68bffd5005c7212d92".into(),
+            size: 250_624,
+            sha256: "2a56b17fc7664ccd3e43e8e00fa07b388041f63f3d6c8bad47865269a1b51eb8".into(),
         },
         fexdarwin_run: Some(OverlayAsset {
             url: format!("{BASE}/fexdarwin-run-arm64"),
@@ -99,6 +101,11 @@ fn built_in() -> OverlayRelease {
             url: format!("{BASE}/wine-media-clipboard-x86_64.tar.gz"),
             size: 5_300_072,
             sha256: "ad5b05bd8870694b249741ae56d0db839a35e52569ca658543509ae62d897958".into(),
+        }),
+        proton_experimental: Some(OverlayAsset {
+            url: format!("{BASE}/wine-proton-experimental-x86_64.tar.gz"),
+            size: 140_892_843,
+            sha256: "614512380db21d7a2b21206e66ef9648966df5a54748df7e6ec39110ef6af29c".into(),
         }),
     }
 }
@@ -164,6 +171,7 @@ fn is_valid_release(rel: &OverlayRelease) -> bool {
         && rel.neptune_windows.as_ref().is_none_or(is_valid_asset)
         && rel.gst_rtsp_root.as_ref().is_none_or(is_valid_asset)
         && rel.wine_media_clipboard.as_ref().is_none_or(is_valid_asset)
+        && rel.proton_experimental.as_ref().is_none_or(is_valid_asset)
 }
 
 /// Whether the Obelisk FX runtime overlay should be installed or updated in
@@ -263,6 +271,8 @@ pub(crate) async fn refresh(voile_root: &Path) {
         resolve_asset(&client, &gh.assets, "gst-rtsp-root-x86_64.tar.gz").await;
     let wine_media_clipboard =
         resolve_asset(&client, &gh.assets, "wine-media-clipboard-x86_64.tar.gz").await;
+    let proton_experimental =
+        resolve_asset(&client, &gh.assets, "wine-proton-experimental-x86_64.tar.gz").await;
 
     let release = OverlayRelease {
         tag: gh.tag_name,
@@ -273,6 +283,7 @@ pub(crate) async fn refresh(voile_root: &Path) {
         neptune_windows,
         gst_rtsp_root,
         wine_media_clipboard,
+        proton_experimental,
     };
     if !is_valid_release(&release) {
         return;
@@ -374,6 +385,7 @@ pub(crate) async fn install(
     let wine_compat = has_compatible_wine_ffmpeg(&base_dir);
     let want_gst_root = wine_compat && overlay.gst_rtsp_root.is_some();
     let want_wine = wine_compat && overlay.wine_media_clipboard.is_some();
+    let want_proton_exp = overlay.proton_experimental.is_some();
 
     let mut total = overlay.wsd.size;
     if let Some(a) = &overlay.fexdarwin_run {
@@ -392,6 +404,9 @@ pub(crate) async fn install(
     if want_wine {
         total += overlay.wine_media_clipboard.as_ref().unwrap().size;
     }
+    if want_proton_exp {
+        total += overlay.proton_experimental.as_ref().unwrap().size;
+    }
     progress.set_progress(0, total);
 
     let work = tempfile::Builder::new()
@@ -405,6 +420,7 @@ pub(crate) async fn install(
         want_neptune_windows,
         want_gst_root,
         want_wine,
+        want_proton_exp,
         work.path(),
         progress,
         &mut received,
@@ -445,6 +461,7 @@ struct DownloadedFiles {
     neptune_windows: Option<PathBuf>,
     gst_rtsp_root: Option<PathBuf>,
     wine_media_clipboard: Option<PathBuf>,
+    proton_experimental: Option<PathBuf>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -454,6 +471,7 @@ async fn download_all(
     want_neptune_windows: bool,
     want_gst_root: bool,
     want_wine: bool,
+    want_proton_exp: bool,
     dir: &Path,
     progress: &Install,
     received: &mut u64,
@@ -548,6 +566,23 @@ async fn download_all(
         None
     };
 
+    let proton_experimental = if want_proton_exp {
+        Some(
+            download_asset(
+                &client,
+                overlay.proton_experimental.as_ref().unwrap(),
+                dir,
+                "wine-proton-experimental.tar.gz",
+                progress,
+                received,
+                total,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+
     Ok(DownloadedFiles {
         wsd,
         fexdarwin_run,
@@ -556,6 +591,7 @@ async fn download_all(
         neptune_windows,
         gst_rtsp_root,
         wine_media_clipboard,
+        proton_experimental,
     })
 }
 
@@ -763,6 +799,26 @@ fn apply_staged_inner(
         unpacked_wine = Some(unpack);
     }
 
+    if let Some(tarball) = &files.proton_experimental {
+        let proton_dst = staged.join("linux/wine-proton-experimental");
+        if proton_dst.exists() {
+            fs::remove_dir_all(&proton_dst)?;
+        }
+        fs::create_dir_all(&proton_dst)?;
+        let status = std::process::Command::new("/usr/bin/tar")
+            .arg("-xzf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(&proton_dst)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err(Failure::Damaged);
+        }
+    }
+
     let stamp = OverlayStamp {
         tag: tag.to_owned(),
         base_voile: base_version.to_owned(),
@@ -880,9 +936,10 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.6-metalfx");
+        assert_eq!(rel.tag, "v0.1.7-metalfx");
         assert!(rel.neptune_windows.is_some());
         assert!(rel.gst_rtsp_root.is_some());
+        assert!(rel.proton_experimental.is_some());
     }
 
     #[test]
@@ -1006,8 +1063,9 @@ mod tests {
             neptune_windows: Some(npt_tarball),
             gst_rtsp_root: Some(gst_tarball),
             wine_media_clipboard: Some(tarball),
+            proton_experimental: None,
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.6-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.7-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(

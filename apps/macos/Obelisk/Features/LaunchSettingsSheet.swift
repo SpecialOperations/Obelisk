@@ -471,6 +471,7 @@ struct LaunchSettingsSheet: View {
         switch engine {
         case .rosetta: L10n.string("ui.launch_settings.engine.rosetta")
         case .linux: L10n.string("ui.launch_settings.engine.linux")
+        case .protonExperimental: L10n.string("ui.launch_settings.engine.proton_experimental")
         }
     }
 
@@ -478,6 +479,7 @@ struct LaunchSettingsSheet: View {
         switch engine {
         case .rosetta: L10n.string("ui.launch_settings.engine.rosetta_detail")
         case .linux: L10n.string("ui.launch_settings.engine.linux_detail")
+        case .protonExperimental: L10n.string("ui.launch_settings.engine.proton_experimental_detail")
         }
     }
 

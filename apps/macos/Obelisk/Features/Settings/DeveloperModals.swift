@@ -366,6 +366,9 @@ final class DeveloperModals {
             LaunchEngineOffer(engine: .linux, translator: .fex, defaultGraphics: .dxmt,
                               graphics: [LaunchGraphicsOffer(graphics: .dxmt, options: [])],
                               lowestRenderPercent: 1, metalfx: true, voiceProcessing: true, gameMode: true),
+            LaunchEngineOffer(engine: .protonExperimental, translator: .fex, defaultGraphics: .dxmt,
+                              graphics: [LaunchGraphicsOffer(graphics: .dxmt, options: [])],
+                              lowestRenderPercent: 1, metalfx: true, voiceProcessing: true, gameMode: true),
         ]
         let engine = choices.engine ?? .rosetta
         let offer = engines.first { $0.engine == engine } ?? engines[0]

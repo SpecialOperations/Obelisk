@@ -70,6 +70,8 @@ pub enum LaunchEngine {
     Rosetta,
     /// Wine for Linux, in voile-lkd's engine.
     Linux,
+    /// Valve's Proton Experimental (Wine 11.0), in voile-lkd's engine.
+    ProtonExperimental,
 }
 
 /// What renders a Windows game's Direct3D.
@@ -208,6 +210,7 @@ impl From<Engine> for LaunchEngine {
         match engine {
             Engine::Rosetta => Self::Rosetta,
             Engine::Linux => Self::Linux,
+            Engine::ProtonExperimental => Self::ProtonExperimental,
         }
     }
 }
@@ -217,6 +220,7 @@ impl From<LaunchEngine> for Engine {
         match engine {
             LaunchEngine::Rosetta => Self::Rosetta,
             LaunchEngine::Linux => Self::Linux,
+            LaunchEngine::ProtonExperimental => Self::ProtonExperimental,
         }
     }
 }
@@ -279,6 +283,11 @@ mod tests {
                     LaunchTranslator::Fex,
                     LaunchGraphics::Dxmt
                 ),
+                (
+                    LaunchEngine::ProtonExperimental,
+                    LaunchTranslator::Fex,
+                    LaunchGraphics::Dxmt
+                ),
             ]
         );
         assert_eq!(
@@ -290,7 +299,7 @@ mod tests {
             .iter()
             .map(|offer| offer.lowest_render_percent)
             .collect();
-        assert_eq!(lowest, [None, Some(1)]);
+        assert_eq!(lowest, [None, Some(1), Some(1)]);
     }
 
     #[test]

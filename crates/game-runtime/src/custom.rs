@@ -106,10 +106,19 @@ pub fn launch_custom(
         return Err(CustomError::NotExecutable);
     }
 
-    // Launch via Voile Linux Engine (voile-lkd) if selected
-    if config.engine == Engine::Linux && config.runner.is_none() {
+    // Launch via Voile Linux Engine (voile-lkd) or Proton Experimental if selected
+    if matches!(config.engine, Engine::Linux | Engine::ProtonExperimental) && config.runner.is_none() {
         let linux_runtime = voile::linux_runtime(&locations.voile)
             .ok_or(CustomError::WineUnavailable)?;
+        let wine_dir = if config.engine == Engine::ProtonExperimental {
+            let proton_wine = linux_runtime.join("wine-proton-experimental");
+            if !proton_wine.join("bin/wine").is_file() {
+                return Err(CustomError::WineUnavailable);
+            }
+            Some(proton_wine)
+        } else {
+            None
+        };
 
         let working_dir = config.executable.parent().unwrap_or(&config.prefix);
         let install_dir = working_dir.canonicalize().unwrap_or_else(|_| working_dir.to_path_buf());
@@ -152,6 +161,11 @@ pub fn launch_custom(
             "--graphics".to_owned(),
             config.graphics.name().to_owned(),
         ];
+
+        if let Some(ref proton_wine) = wine_dir {
+            arguments.push("--wine".to_owned());
+            arguments.push(proton_wine.to_string_lossy().into_owned());
+        }
 
         if config.render_percent != 100 {
             arguments.push("--render-percent".to_owned());

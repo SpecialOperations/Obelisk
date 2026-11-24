@@ -295,7 +295,7 @@ pub struct GraphicsOffer {
 /// Rosetta's Wine takes D3DMetal's options and no render resolution, and
 /// macOS never takes its games for games; the Linux engine's render servers
 /// take no options yet.
-pub const ENGINES: [EngineOffer; 2] = [
+pub const ENGINES: [EngineOffer; 3] = [
     EngineOffer {
         engine: Engine::Rosetta,
         translator: Translator::Rosetta,
@@ -328,6 +328,24 @@ pub const ENGINES: [EngineOffer; 2] = [
             },
         ],
         // wsd keeps the desktop at 640x480 pixels or more: on a Retina MacBook, below about 25 gives the same one.
+        lowest_render_percent: Some(1),
+        metalfx: true,
+        voice_processing: true,
+        game_mode: true,
+    },
+    EngineOffer {
+        engine: Engine::ProtonExperimental,
+        translator: Translator::Fex,
+        graphics: &[
+            GraphicsOffer {
+                graphics: Graphics::Dxmt,
+                options: &[],
+            },
+            GraphicsOffer {
+                graphics: Graphics::D3DMetal,
+                options: &[],
+            },
+        ],
         lowest_render_percent: Some(1),
         metalfx: true,
         voice_processing: true,

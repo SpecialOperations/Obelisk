@@ -584,6 +584,7 @@ impl From<game_runtime::supervisor::Played> for GamePlayed {
                 match engine {
                     Engine::Rosetta => "rosetta",
                     Engine::Linux => "linux",
+                    Engine::ProtonExperimental => "proton-experimental",
                 }
                 .to_owned()
             }),

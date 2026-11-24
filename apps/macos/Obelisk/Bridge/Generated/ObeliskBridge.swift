@@ -11249,6 +11249,10 @@ public enum LaunchEngine: Equatable, Hashable {
      * Wine for Linux, in voile-lkd's engine.
      */
     case linux
+    /**
+     * Valve's Proton Experimental (Wine 11.0), in voile-lkd's engine.
+     */
+    case protonExperimental
 
 
 
@@ -11274,6 +11278,8 @@ public struct FfiConverterTypeLaunchEngine: FfiConverterRustBuffer {
         
         case 2: return .linux
         
+        case 3: return .protonExperimental
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -11288,6 +11294,10 @@ public struct FfiConverterTypeLaunchEngine: FfiConverterRustBuffer {
         
         case .linux:
             writeInt(&buf, Int32(2))
+        
+        
+        case .protonExperimental:
+            writeInt(&buf, Int32(3))
         
         }
     }

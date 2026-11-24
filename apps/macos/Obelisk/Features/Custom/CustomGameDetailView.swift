@@ -189,7 +189,7 @@ struct CustomGameDetailView: View {
             } else {
                 metricItem(
                     symbol: "cpu",
-                    text: currentGame.engine == .rosetta ? L10n.string("ui.custom.engine_rosetta") : L10n.string("ui.custom.engine_linux")
+                    text: engineLabel(currentGame.engine)
                 )
 
                 metricItem(
@@ -199,6 +199,14 @@ struct CustomGameDetailView: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    private func engineLabel(_ engine: LaunchEngine) -> String {
+        switch engine {
+        case .rosetta: L10n.string("ui.custom.engine_rosetta")
+        case .linux: L10n.string("ui.custom.engine_linux")
+        case .protonExperimental: L10n.string("ui.custom.engine_proton_experimental")
+        }
     }
 
     private func metricItem(symbol: String, text: String) -> some View {
@@ -296,7 +304,7 @@ struct CustomGameDetailView: View {
                 ObeliskRow(title: L10n.string("ui.custom.compatibility_section")) {
                     SymbolTile(name: "gearshape.2.fill", colors: TileColors.violet)
                 } detail: {
-                    let engineText = currentGame.engine == .rosetta ? L10n.string("ui.custom.engine_rosetta") : L10n.string("ui.custom.engine_linux")
+                    let engineText = engineLabel(currentGame.engine)
                     let graphicsText = currentGame.graphics == .d3dMetal ? L10n.string("ui.custom.graphics_d3dmetal") : L10n.string("ui.custom.graphics_dxmt")
                     let rtText = currentGame.rayTracing ? "RT: On" : "RT: Off"
                     let hudText = currentGame.performanceHud ? "HUD: On" : "HUD: Off"

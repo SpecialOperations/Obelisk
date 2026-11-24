@@ -187,6 +187,7 @@ extension LaunchEngine: Codable {
         let raw = try container.decode(String.self)
         switch raw {
         case "linux": self = .linux
+        case "protonExperimental": self = .protonExperimental
         default: self = .rosetta
         }
     }
@@ -196,6 +197,7 @@ extension LaunchEngine: Codable {
         switch self {
         case .rosetta: try container.encode("rosetta")
         case .linux: try container.encode("linux")
+        case .protonExperimental: try container.encode("protonExperimental")
         }
     }
 }

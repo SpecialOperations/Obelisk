@@ -27,11 +27,12 @@ set -u
 unset DYLD_INSERT_LIBRARIES
 runtime=$1 home=$2 install=$3 cwd=$4
 shift 4
-graphics=dxmt render_percent= metalfx_spatial=off metalfx_framegen=off voice_processing=off game_mode=on binds= guest_env=()
+graphics=dxmt wine_dir= render_percent= metalfx_spatial=off metalfx_framegen=off voice_processing=off game_mode=on binds= guest_env=()
 while [ $# -gt 0 ] && [ "$1" != "--" ]; do
     [ $# -ge 2 ] || exit 2
     case $1 in
     --graphics) graphics=$2 ;;
+    --wine) wine_dir=$2 ;;
     --render-percent) render_percent=$2 ;;
     --metalfx-spatial) metalfx_spatial=$2 ;;
     --metalfx-framegen) metalfx_framegen=$2 ;;
@@ -209,8 +210,9 @@ for _ in $(seq 1 100); do
     sleep 0.05
 done
 
+[ -n "$wine_dir" ] || wine_dir="$runtime/wine"
 export FEXDARWIN_LKD=1 FEXDARWIN_ROOT="$runtime/root" FEXDARWIN_ROOT_RO=1 FEXDARWIN_SUPERVISOR_PID=$$
-export FEXDARWIN_BIND="/opt/wine=$runtime/wine:ro;/home/user=$home;/opt/game=$install;/run/obelisk=$sockets_root/$sockets$binds"
+export FEXDARWIN_BIND="/opt/wine=$wine_dir:ro;/home/user=$home;/opt/game=$install;/run/obelisk=$sockets_root/$sockets$binds"
 # wineserver writes the registry only when it exits: wait for it inside the guest before the game ends. Started
 # with -p0, it stops Wine's own processes as soon as the game's last process ends, instead of 3 seconds later.
 # For native Linux executables and scripts, make executable and execute directly under fexdarwin-run.

@@ -370,11 +370,12 @@ struct AddCustomGameSheet: View {
                 ObeliskRow(title: L10n.string("ui.custom.engine")) {
                     SymbolTile(name: "cpu", colors: TileColors.violet)
                 } detail: {
-                    Text(engine == .rosetta ? L10n.string("ui.custom.engine_rosetta") : L10n.string("ui.custom.engine_linux"))
+                    Text(engineLabel(engine))
                 } accessory: {
                     Picker(selection: $engine) {
                         Text(L10n.string("ui.custom.engine_rosetta")).tag(LaunchEngine.rosetta)
                         Text(L10n.string("ui.custom.engine_linux")).tag(LaunchEngine.linux)
+                        Text(L10n.string("ui.custom.engine_proton_experimental")).tag(LaunchEngine.protonExperimental)
                     } label: {
                         EmptyView()
                     }
@@ -614,6 +615,14 @@ struct AddCustomGameSheet: View {
             let path = model.copyArtwork(from: url, for: gameId, kind: "banner") ?? url.path
             customBannerPath = path
             cropTarget = .banner(path: path)
+        }
+    }
+
+    private func engineLabel(_ engine: LaunchEngine) -> String {
+        switch engine {
+        case .rosetta: L10n.string("ui.custom.engine_rosetta")
+        case .linux: L10n.string("ui.custom.engine_linux")
+        case .protonExperimental: L10n.string("ui.custom.engine_proton_experimental")
         }
     }
 

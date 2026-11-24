@@ -107,9 +107,9 @@ fn runtime_for(locations: &Locations, install: &Path, engine: Engine) -> PathBuf
             record_calls(&runtime);
             runtime
         }
-        Engine::Linux => {
+        Engine::Linux | Engine::ProtonExperimental => {
             let runtime = engine_runtime(locations);
-            let prefix = Engine::Linux
+            let prefix = engine
                 .prefix(&locations.wine_prefixes, install)
                 .unwrap();
             fs::create_dir_all(prefix.join("drive_c/windows/system32")).unwrap();

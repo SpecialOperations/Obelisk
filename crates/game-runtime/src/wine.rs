@@ -53,6 +53,9 @@ pub enum Engine {
     /// Voile's Wine for Linux, which voile-lkd's engine runs natively; for the
     /// games whose Launch settings name it.
     Linux,
+    /// Valve's Proton Experimental (Wine 11.0) built with Obelisk's Voile
+    /// drivers, running natively under voile-lkd.
+    ProtonExperimental,
 }
 
 /// The graphics backend that renders a Windows game's Direct3D 10 to 12
@@ -344,6 +347,7 @@ enum Programs {
 /// Names Obelisk sets in an engine's Wine. A profile could still replace one
 /// for its game; the profiles table sets none, and a table that does loses
 /// that game.
+#[derive(Clone, Copy)]
 pub(crate) struct Reserved {
     pub variables: &'static [&'static str],
     pub dlls: &'static [&'static str],
@@ -400,6 +404,7 @@ impl Engine {
         match self {
             Self::Rosetta => &rosetta::RosettaWine,
             Self::Linux => &linux_engine::LinuxEngine,
+            Self::ProtonExperimental => &linux_engine::ProtonExperimentalEngine,
         }
     }
 
@@ -637,7 +642,7 @@ fn remove_prefixes(
     rosetta: &Path,
 ) -> Result<(), obelisk_core::installation::RemovalFailure> {
     use obelisk_core::installation::RemovalFailure;
-    for engine in [Engine::Linux, Engine::Rosetta] {
+    for engine in [Engine::Linux, Engine::ProtonExperimental, Engine::Rosetta] {
         let adapter = engine.adapter();
         let prefix = adapter
             .prefix(rosetta)
