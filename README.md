@@ -4,8 +4,8 @@
   <img src="assets/readme/icon.png" alt="Obelisk FX icon" width="200" height="200">
   <h1>Obelisk FX</h1>
   <p>
-    Play Windows PC games on your Mac without a SteamOS virtual machine! <b>VRChat focused community fork<b> of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Adds VRChat specific optimizations to fix crashes, <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime & app updates.
+    Play Windows PC games on your Mac without a SteamOS virtual machine! <b>VRChat-focused community fork</b> of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
+    Apple Developer ID signed &amp; notarized. Adds VRChat-specific optimizations to fix crashes, <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, optional <b>Proton-GE</b> &amp; <b>Proton Experimental</b> engines, Linux Wine Mono support, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime &amp; app updates.
   </p>
   <p>
     <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Obelisk FX</b></a>
@@ -44,8 +44,9 @@
   - Improved Dock icon handling so background helper tools don't overwrite the running game's icon.
 - **Native Bidirectional Clipboard Sync** (Linux engine): Seamlessly copy and paste between macOS and Windows games (including in-game paste buttons and `Cmd+C/V/X/A`) via native clipboard synchronization between `wsd` and `wineobelisk.drv`.
 - **Custom Games & Artwork Cropper** ([Zagrios/Obelisk#76](https://github.com/Zagrios/Obelisk/pull/76) by [@thatonemacosdev](https://github.com/thatonemacosdev)): Dedicated **Custom** library section for standalone Windows `.exe` binaries, native Linux ELF executables/scripts, and macOS `.app` bundles with automatic engine/graphics detection and an interactive cover/banner artwork cropper.
-- **Automatic Runtime Overlay & Sparkle Auto-Updates**: Automatically downloads, verifies, and applies the Obelisk FX Linux-engine overlay (runtime binaries, Neptune DLLs, Proton-RTSP media stack, and GStreamer plugins) with zero terminal commands, plus in-app **Check for Updates…** via Sparkle.
-- **Proton Experimental Engine Option (Opt-In Early Preview)** (Linux engine): Optional **Proton Experimental** engine toggle under **Settings → Games** (off by default, with an **Offload** button to reclaim disk space anytime). When enabled, unlocks **Proton Experimental** in Storefront Launch Settings and Custom Games (backed by Valve's `experimental_11.0` Wine tree with WoW64, `wineobelisk.drv`, `wineobeliskaudio.drv`, `nptunix`, `winebus.sys`, GStreamer, and native FFmpeg `winedmo`, stored in an isolated `-proton-experimental` prefix). *Note: This engine is currently in a very early preview state and will receive further compatibility and stability work in upcoming releases.*
+- **Apple Signed & Notarized + Automatic Runtime Overlay & Sparkle Auto-Updates**: Signed with an Apple Developer ID certificate and notarized for macOS Gatekeeper (no `xattr` workaround needed, and macOS Keychain remembers your saved storefront logins across updates). Automatically downloads, verifies, and applies the Obelisk FX Linux-engine overlay (runtime binaries, Neptune DLLs, Proton-RTSP media stack, and GStreamer plugins) with zero terminal commands, plus in-app **Check for Updates…** via Sparkle.
+- **Wine Mono 10.4.1 on Linux Engines & Steam `"config"` Launcher Support**: Automatically shares Voile's bundled Wine Mono into `Wine (Linux)`, `Proton Experimental`, and `Proton-GE` prefixes so `.NET` game launchers work out of the box, and supports Steam titles whose only Windows launch entry is tagged `"type": "config"` (such as *Danganronpa 1 & 2*).
+- **Optional Proton-GE & Proton Experimental Engines (Opt-In)** (Linux engine): Independent opt-in toggles under **Settings → Games** (off by default, with live disk-usage readouts and **Offload** buttons to reclaim disk space anytime). When enabled, unlocks **Proton-GE** (`GE-Proton11-14` with Wine-Staging 11.0, GE game patches, and native FFmpeg `winedmo`) and/or **Proton Experimental** (Valve's `experimental_11.0` Wine tree) in Storefront Launch Settings and Custom Games — each built with WoW64, `wineobelisk.drv`, `wineobeliskaudio.drv`, `nptunix`, and `winebus.sys`, stored in isolated `-proton-ge` / `-proton-experimental` prefixes.
 
 
 
@@ -95,16 +96,13 @@ Windows games play too. Obelisk sets everything up for you: no bottles to create
 
 1. Download the latest Obelisk FX `.dmg` from the [latest fork release](https://github.com/SpecialOperations/Obelisk/releases/latest).
 2. Open the disk image and drag **Obelisk FX** (`Obelisk.app`) onto **Applications**.
-3. Because this community fork build is ad-hoc signed (not notarized by Apple), remove macOS's quarantine flag once before opening:
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/Obelisk.app
-   ```
-4. Launch **Obelisk FX** and start any Windows game — Obelisk FX automatically downloads the base Voile runtime and automatically fetches, verifies, and applies the **Obelisk FX** Linux-engine runtime overlay (MetalFX, Frame Generation, Voice Isolation, clipboard sync, and in-game video playback) from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) with no terminal scripts needed.
+3. Launch **Obelisk FX** directly (releases `0.6.4.8` and later are Apple Developer ID signed and notarized — no `xattr` command needed) and start any Windows game. Obelisk FX automatically downloads the base Voile runtime and automatically fetches, verifies, and applies the **Obelisk FX** Linux-engine runtime overlay (MetalFX, Frame Generation, Voice Isolation, clipboard sync, and in-game video playback) from [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest) with no terminal scripts needed.
+4. *(Optional)* In **Settings → Games**, opt in to **Proton-GE** or **Proton Experimental** if you want additional Linux-engine Proton runtimes (each can be offloaded at any time to reclaim disk space).
 5. In any Linux-engine game's **Launch Settings**, lower **Render resolution** (e.g. **50%**) and toggle **MetalFX Spatial**, **MetalFX Frame Generation**, and/or **Mic Voice Isolation** on.
 
 > **Note:** Obelisk FX shares the `com.zagrios.obelisk` library folder so your installed games, prefixes, and Keychain sessions carry over seamlessly. To revert the Voile runtime to stock at any time, run `rm -rf "$HOME/Library/Application Support/com.zagrios.obelisk/Voile/current"`. (Manual terminal install is still available if desired via [SpecialOperations/voile-lkd](https://github.com/SpecialOperations/voile-lkd/releases/latest).)
 
-**Upstream installation:** If you want the official Apple-notarized release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk/releases/latest).
+**Upstream installation:** If you want the upstream release without these fork changes, download it from [Zagrios/Obelisk](https://github.com/Zagrios/Obelisk/releases/latest).
 
 ## Getting started
 
@@ -345,7 +343,7 @@ Obelisk FX is a community fork maintained by [SpecialOperations](https://github.
 It builds on the work of many open-source projects, without which Windows games could not run on a Mac:
 
 - [Wine](https://www.winehq.org) and [CrossOver](https://www.codeweavers.com/crossover)'s open-source Wine by CodeWeavers, the base of [voile-wine](https://github.com/Zagrios/voile-wine).
-- [Proton](https://github.com/ValveSoftware/Proton) by Valve, whose Steam bridge connects Windows games to Steam.
+- [Proton](https://github.com/ValveSoftware/Proton) by Valve and [GE-Proton](https://github.com/GloriousEggroll/proton-ge-custom) by GloriousEggroll, powering Proton compatibility and Steam bridge support.
 - Apple's [Game Porting Toolkit](https://developer.apple.com/games/game-porting-toolkit/) and its D3DMetal, and [DXMT](https://github.com/3Shain/dxmt), which draw Direct3D with Metal.
 - [FEX](https://github.com/FEX-Emu/FEX), and [UTM](https://github.com/utmapp/UTM)'s Neptune and virglrenderer, which power parts of the Linux engine.
 - [SDL](https://github.com/libsdl-org/SDL), for gamepads, and [Wine Mono](https://gitlab.winehq.org/mono/wine-mono), for .NET games.
