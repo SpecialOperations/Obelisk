@@ -32,7 +32,7 @@
 
 ## Obelisk FX Features & Improvements
 
-- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 45%–75% resolution for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX.
+- **MetalFX Spatial Upscaling** (Linux engine): Toggle right under **Render resolution** in a game's **Launch Settings**. Render at 45%–75% resolution (50% sweet spot) for higher FPS and upscale sharply to native Retina pixels with Apple MetalFX. 
 - **2× MetalFX Frame Generation** (Linux engine, macOS 27+): Toggle right under **MetalFX Spatial**. Inserts interpolated midpoint frames for smoother motion on high-refresh displays and chains directly into MetalFX Spatial when both are enabled.
 - **Mic Voice Isolation & Echo Cancellation** (Linux engine): Toggle under **Audio** in a game's **Launch Settings** (off by default; recommended when using your device's speakers and built-in mic). Routes game playback and microphone capture through macOS's native `VoiceProcessingIO` unit to cancel speaker echo and suppress background noise (also unlocks macOS Control Center's **Voice Isolation** mic mode).
 - **Proton-RTSP 11.0 Media & Livestream Playback** (Linux engine): Upgraded Media Foundation / `winegstreamer` stack based on [SpookySkeletons/proton-rtsp](https://github.com/SpookySkeletons/proton-rtsp) (`proton-rtsp-11.0`) paired with bundled GStreamer 1.26.2 plugins (`libsoup-3.0`, GnuTLS TLS, HLS, RTMP/RTMP2, SRT, MPEG-TS, AV1, HEVC) and same-process D3D11 shared textures in Neptune — enabling YouTube videos, YouTube livestreams, Twitch streams, RTSP, and MPEG-TS playback inside VRChat and other games.
