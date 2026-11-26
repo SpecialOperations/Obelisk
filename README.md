@@ -5,7 +5,7 @@
   <h1>Obelisk FX</h1>
   <p>
     Play Windows PC games on your Mac without a SteamOS virtual machine! <b>VRChat-focused community fork</b> of <a href="https://github.com/Zagrios/Obelisk"><b>Zagrios/Obelisk</b></a> by <a href="https://github.com/SpecialOperations">@SpecialOperations</a>.<br>
-    Apple Developer ID signed &amp; notarized. Adds VRChat-specific optimizations to fix crashes, <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, optional <b>Proton-GE</b> &amp; <b>Proton Experimental</b> engines, Linux Wine Mono support, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime &amp; app updates.
+    Adds VRChat-specific optimizations to fix crashes, <b>MetalFX Spatial</b> upscaling, <b>2× MetalFX Frame Generation</b>, <b>Mic Voice Isolation</b>, <b>Proton-RTSP 11.0</b> livestream/video playback, optional <b>Proton-GE</b> &amp; <b>Proton Experimental</b> engines, Linux Wine Mono support, native macOS Full Screen, native clipboard sync, custom games, memory/stability fixes, and automatic runtime &amp; app updates.
   </p>
   <p>
     <a href="https://github.com/SpecialOperations/Obelisk/releases/latest"><b>Download Obelisk FX</b></a>
