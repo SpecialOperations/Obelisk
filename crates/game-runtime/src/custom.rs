@@ -106,18 +106,30 @@ pub fn launch_custom(
         return Err(CustomError::NotExecutable);
     }
 
-    // Launch via Voile Linux Engine (voile-lkd) or Proton Experimental if selected
-    if matches!(config.engine, Engine::Linux | Engine::ProtonExperimental) && config.runner.is_none() {
+    // Launch via Voile Linux Engine (voile-lkd), Proton Experimental, or Proton-GE if selected
+    if matches!(
+        config.engine,
+        Engine::Linux | Engine::ProtonExperimental | Engine::ProtonGe
+    ) && config.runner.is_none()
+    {
         let linux_runtime = voile::linux_runtime(&locations.voile)
             .ok_or(CustomError::WineUnavailable)?;
-        let wine_dir = if config.engine == Engine::ProtonExperimental {
-            let proton_wine = linux_runtime.join("wine-proton-experimental");
-            if !proton_wine.join("bin/wine").is_file() {
-                return Err(CustomError::WineUnavailable);
+        let wine_dir = match config.engine {
+            Engine::ProtonExperimental => {
+                let proton_wine = linux_runtime.join("wine-proton-experimental");
+                if !proton_wine.join("bin/wine").is_file() {
+                    return Err(CustomError::WineUnavailable);
+                }
+                Some(proton_wine)
             }
-            Some(proton_wine)
-        } else {
-            None
+            Engine::ProtonGe => {
+                let proton_wine = linux_runtime.join("wine-proton-ge");
+                if !proton_wine.join("bin/wine").is_file() {
+                    return Err(CustomError::WineUnavailable);
+                }
+                Some(proton_wine)
+            }
+            _ => None,
         };
 
         let working_dir = config.executable.parent().unwrap_or(&config.prefix);

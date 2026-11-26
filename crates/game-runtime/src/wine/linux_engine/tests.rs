@@ -978,3 +978,29 @@ fn smoke() {
     );
     assert!(output.status.success(), "{:?}", output.status);
 }
+
+#[test]
+fn wine_mono_from_voile_release_is_bound_and_enables_mscoree() {
+    let (_directory, root) = installation();
+    let install = root.join("install");
+    fs::create_dir_all(&install).unwrap();
+    let executable = install.join("Launcher.exe");
+    fs::write(&executable, pe()).unwrap();
+    let launched = launch_target(&executable, &[]);
+    let mut config = linux_config(&root);
+    config.settings.engine = wine::Engine::ProtonGe;
+    let mono_dir = config.runtime.parent().unwrap().join("share/wine/mono");
+    fs::create_dir_all(mono_dir.join("wine-mono-10.4.1")).unwrap();
+
+    let target = wine::target::<Plain>(&config, &game(&install), &launched, HashMap::new()).unwrap();
+    let bound = options(&target, "--bind");
+    assert_eq!(
+        bound,
+        vec![format!("/usr/share/wine/mono={}:ro", mono_dir.display())]
+    );
+    let overrides = options(&target, "--env")
+        .into_iter()
+        .find_map(|entry| entry.strip_prefix("WINEDLLOVERRIDES=").map(str::to_owned))
+        .unwrap();
+    assert_eq!(overrides, "mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n");
+}

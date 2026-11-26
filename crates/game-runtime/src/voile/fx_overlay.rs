@@ -28,6 +28,9 @@ pub(super) const FEED_FILE: &str = "fx-overlay-feed.json";
 /// Marker file inside `Voile/` recording that the player opted in to the
 /// optional Proton Experimental runtime.
 pub(super) const PROTON_EXPERIMENTAL_OPT_IN: &str = "proton-experimental";
+/// Marker file inside `Voile/` recording that the player opted in to the
+/// optional Proton-GE runtime.
+pub(super) const PROTON_GE_OPT_IN: &str = "proton-ge";
 /// Marker file placed inside `Voile/current/` when managed by Obelisk FX.
 /// A `Voile/current/` directory without this marker is treated as a manual
 /// developer runtime and left untouched.
@@ -54,6 +57,8 @@ pub(crate) struct OverlayRelease {
     pub wine_media_clipboard: Option<OverlayAsset>,
     #[serde(default)]
     pub proton_experimental: Option<OverlayAsset>,
+    #[serde(default)]
+    pub proton_ge: Option<OverlayAsset>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -62,16 +67,18 @@ struct OverlayStamp {
     base_voile: String,
     #[serde(default)]
     proton_experimental: bool,
+    #[serde(default)]
+    proton_ge: bool,
 }
 
-/// Built-in pinned fallback for `v0.1.8-metalfx` so Obelisk FX can download
+/// Built-in pinned fallback for `v0.1.9-metalfx` so Obelisk FX can download
 /// and verify the runtime overlay directly from GitHub release assets even if
 /// GitHub's REST API is rate-limited.
 fn built_in() -> OverlayRelease {
     const BASE: &str =
-        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.8-metalfx";
+        "https://github.com/SpecialOperations/voile-lkd/releases/download/v0.1.9-metalfx";
     OverlayRelease {
-        tag: "v0.1.8-metalfx".into(),
+        tag: "v0.1.9-metalfx".into(),
         wsd: OverlayAsset {
             url: format!("{BASE}/wsd-arm64"),
             size: 250_624,
@@ -112,6 +119,11 @@ fn built_in() -> OverlayRelease {
             size: 140_892_843,
             sha256: "614512380db21d7a2b21206e66ef9648966df5a54748df7e6ec39110ef6af29c".into(),
         }),
+        proton_ge: Some(OverlayAsset {
+            url: format!("{BASE}/wine-proton-ge-x86_64.tar.gz"),
+            size: 143_015_090,
+            sha256: "f3c22aa258a0f2fa2fd7dc50d92bdfebe415d15f0f24e0a15c39a4bea5285ebc".into(),
+        }),
     }
 }
 
@@ -133,37 +145,217 @@ pub(crate) fn is_managed(voile_root: &Path) -> bool {
     read_stamp(&voile_root.join(DEVELOPMENT)).is_some()
 }
 
+#[derive(Clone, Copy)]
+enum OptionalProton {
+    Experimental,
+    Ge,
+}
+
+impl OptionalProton {
+    fn opt_in_file(self) -> &'static str {
+        match self {
+            Self::Experimental => PROTON_EXPERIMENTAL_OPT_IN,
+            Self::Ge => PROTON_GE_OPT_IN,
+        }
+    }
+
+    fn subdir(self) -> &'static str {
+        match self {
+            Self::Experimental => "wine-proton-experimental",
+            Self::Ge => "wine-proton-ge",
+        }
+    }
+
+    fn archive_name(self) -> &'static str {
+        match self {
+            Self::Experimental => "wine-proton-experimental.tar.gz",
+            Self::Ge => "wine-proton-ge.tar.gz",
+        }
+    }
+
+    fn asset(self, release: &OverlayRelease) -> Option<&OverlayAsset> {
+        match self {
+            Self::Experimental => release.proton_experimental.as_ref(),
+            Self::Ge => release.proton_ge.as_ref(),
+        }
+    }
+
+    fn dir(self, voile_root: &Path) -> PathBuf {
+        crate::voile::linux_runtime(voile_root)
+            .unwrap_or_else(|| voile_root.join(DEVELOPMENT).join("linux"))
+            .join(self.subdir())
+    }
+
+    fn enabled(self, voile_root: &Path) -> bool {
+        voile_root.join(self.opt_in_file()).is_file()
+    }
+
+    fn set_enabled(self, voile_root: &Path, enabled: bool) -> std::io::Result<()> {
+        let marker = voile_root.join(self.opt_in_file());
+        if enabled {
+            fs::create_dir_all(voile_root)?;
+            fs::write(marker, b"")
+        } else {
+            match fs::remove_file(marker) {
+                Ok(()) => Ok(()),
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(err) => Err(err),
+            }
+        }
+    }
+
+    fn installed(self, voile_root: &Path) -> bool {
+        self.dir(voile_root).join("bin/wine").is_file()
+    }
+
+    fn disk_bytes(self, voile_root: &Path) -> u64 {
+        let dir = self.dir(voile_root);
+        if !dir.join("bin/wine").is_file() {
+            return 0;
+        }
+        dir_size_bytes(&dir)
+    }
+
+    fn download_bytes(self, voile_root: &Path) -> u64 {
+        let rel = wanted(voile_root);
+        self.asset(&rel).map_or(0, |asset| asset.size)
+    }
+
+    fn update_stamp(self, voile_root: &Path, installed: bool) {
+        let current = voile_root.join(DEVELOPMENT);
+        let Some(mut stamp) = read_stamp(&current) else {
+            return;
+        };
+        match self {
+            Self::Experimental => stamp.proton_experimental = installed,
+            Self::Ge => stamp.proton_ge = installed,
+        }
+        if let Ok(bytes) = serde_json::to_vec_pretty(&stamp) {
+            let _ = fs::write(current.join(STAMP_FILE), bytes);
+        }
+    }
+
+    fn offload(self, voile_root: &Path) -> std::io::Result<u64> {
+        let dir = self.dir(voile_root);
+        let freed = dir_size_bytes(&dir);
+        for candidate in [
+            dir,
+            voile_root
+                .join(DEVELOPMENT)
+                .join("linux")
+                .join(self.subdir()),
+        ] {
+            match fs::remove_dir_all(&candidate) {
+                Ok(()) => {}
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                Err(err) => return Err(err),
+            }
+        }
+        self.set_enabled(voile_root, false)?;
+        self.update_stamp(voile_root, false);
+        Ok(freed)
+    }
+
+    async fn install(self, voile_root: &Path) -> Result<(), Failure> {
+        let _installing = super::INSTALLING.lock().await;
+        if self.installed(voile_root) {
+            self.set_enabled(voile_root, true)?;
+            self.update_stamp(voile_root, true);
+            return Ok(());
+        }
+        let Some(linux_dir) = crate::voile::linux_runtime(voile_root) else {
+            // Base Voile is not installed yet; record opt-in so the first overlay
+            // install includes this Proton runtime automatically.
+            self.set_enabled(voile_root, true)?;
+            return Ok(());
+        };
+
+        refresh(voile_root).await;
+        let rel = wanted(voile_root);
+        let asset = self.asset(&rel).ok_or(Failure::Download)?.clone();
+
+        fs::create_dir_all(voile_root)?;
+        let work = tempfile::Builder::new()
+            .prefix(UNFINISHED)
+            .tempdir_in(voile_root)?;
+        let client = reqwest::Client::builder()
+            .https_only(true)
+            .user_agent(USER_AGENT)
+            .connect_timeout(Duration::from_secs(20))
+            .read_timeout(Duration::from_secs(60))
+            .build()
+            .map_err(|_| Failure::Download)?;
+        let progress = Install::new();
+        let mut received = 0_u64;
+        let tarball = download_asset(
+            &client,
+            &asset,
+            work.path(),
+            self.archive_name(),
+            &progress,
+            &mut received,
+            asset.size,
+        )
+        .await?;
+
+        let voile_root = voile_root.to_owned();
+        tokio::task::spawn_blocking(move || {
+            let staging_parent = tempfile::Builder::new()
+                .prefix(UNFINISHED)
+                .tempdir_in(&linux_dir)?;
+            let staged = staging_parent.path().join(self.subdir());
+            fs::create_dir_all(&staged)?;
+            let status = std::process::Command::new("/usr/bin/tar")
+                .arg("-xzf")
+                .arg(&tarball)
+                .arg("-C")
+                .arg(&staged)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()?;
+            if !status.success() || !staged.join("bin/wine").is_file() {
+                return Err(Failure::Damaged);
+            }
+            let dst = linux_dir.join(self.subdir());
+            let old = if dst.exists() {
+                let old = staging_parent.path().join("old-proton");
+                fs::rename(&dst, &old)?;
+                Some(old)
+            } else {
+                None
+            };
+            if let Err(err) = fs::rename(&staged, &dst) {
+                if let Some(old) = old {
+                    let _ = fs::rename(old, &dst);
+                }
+                return Err(err.into());
+            }
+            drop(staging_parent);
+            self.set_enabled(&voile_root, true)?;
+            self.update_stamp(&voile_root, true);
+            Ok(())
+        })
+        .await
+        .map_err(|_| Failure::Storage)?
+    }
+}
+
 /// Whether the player opted in to installing and keeping the optional Proton
 /// Experimental runtime (off by default).
 pub fn proton_experimental_enabled(voile_root: &Path) -> bool {
-    voile_root.join(PROTON_EXPERIMENTAL_OPT_IN).is_file()
+    OptionalProton::Experimental.enabled(voile_root)
 }
 
 /// Records whether the player opted in to the optional Proton Experimental
 /// runtime.
 pub fn set_proton_experimental_enabled(voile_root: &Path, enabled: bool) -> std::io::Result<()> {
-    let marker = voile_root.join(PROTON_EXPERIMENTAL_OPT_IN);
-    if enabled {
-        fs::create_dir_all(voile_root)?;
-        fs::write(marker, b"")
-    } else {
-        match fs::remove_file(marker) {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
-            Err(err) => Err(err),
-        }
-    }
-}
-
-fn proton_experimental_dir(voile_root: &Path) -> PathBuf {
-    crate::voile::linux_runtime(voile_root)
-        .unwrap_or_else(|| voile_root.join(DEVELOPMENT).join("linux"))
-        .join("wine-proton-experimental")
+    OptionalProton::Experimental.set_enabled(voile_root, enabled)
 }
 
 /// Whether Proton Experimental binaries are currently installed on disk.
 pub fn proton_experimental_installed(voile_root: &Path) -> bool {
-    proton_experimental_dir(voile_root).join("bin/wine").is_file()
+    OptionalProton::Experimental.installed(voile_root)
 }
 
 fn dir_size_bytes(path: &Path) -> u64 {
@@ -191,141 +383,66 @@ fn dir_size_bytes(path: &Path) -> u64 {
 /// Bytes occupied on disk by the installed Proton Experimental runtime (0 if
 /// not installed).
 pub fn proton_experimental_disk_bytes(voile_root: &Path) -> u64 {
-    let dir = proton_experimental_dir(voile_root);
-    if !dir.join("bin/wine").is_file() {
-        return 0;
-    }
-    dir_size_bytes(&dir)
+    OptionalProton::Experimental.disk_bytes(voile_root)
 }
 
 /// Compressed archive size in bytes for the optional Proton Experimental
 /// runtime in the current overlay release.
 pub fn proton_experimental_download_bytes(voile_root: &Path) -> u64 {
-    wanted(voile_root)
-        .proton_experimental
-        .map_or(0, |asset| asset.size)
-}
-
-fn update_stamp_proton_experimental(voile_root: &Path, installed: bool) {
-    let current = voile_root.join(DEVELOPMENT);
-    let Some(mut stamp) = read_stamp(&current) else {
-        return;
-    };
-    stamp.proton_experimental = installed;
-    if let Ok(bytes) = serde_json::to_vec_pretty(&stamp) {
-        let _ = fs::write(current.join(STAMP_FILE), bytes);
-    }
+    OptionalProton::Experimental.download_bytes(voile_root)
 }
 
 /// Removes the installed Proton Experimental runtime from disk to reclaim
 /// storage space and clears the opt-in preference so future overlay updates do
 /// not re-download it. Returns the number of bytes freed.
 pub fn offload_proton_experimental(voile_root: &Path) -> std::io::Result<u64> {
-    let dir = proton_experimental_dir(voile_root);
-    let freed = dir_size_bytes(&dir);
-    for candidate in [
-        dir,
-        voile_root
-            .join(DEVELOPMENT)
-            .join("linux/wine-proton-experimental"),
-    ] {
-        match fs::remove_dir_all(&candidate) {
-            Ok(()) => {}
-            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
-            Err(err) => return Err(err),
-        }
-    }
-    set_proton_experimental_enabled(voile_root, false)?;
-    update_stamp_proton_experimental(voile_root, false);
-    Ok(freed)
+    OptionalProton::Experimental.offload(voile_root)
 }
 
 /// Opts in to Proton Experimental and, if the Linux engine runtime is already
 /// installed, downloads and extracts only the Proton Experimental archive right
 /// away without re-downloading the rest of Voile.
 pub async fn install_proton_experimental(voile_root: &Path) -> Result<(), Failure> {
-    let _installing = super::INSTALLING.lock().await;
-    if proton_experimental_installed(voile_root) {
-        set_proton_experimental_enabled(voile_root, true)?;
-        update_stamp_proton_experimental(voile_root, true);
-        return Ok(());
-    }
-    let Some(linux_dir) = crate::voile::linux_runtime(voile_root) else {
-        // Base Voile is not installed yet; record opt-in so the first overlay
-        // install includes Proton Experimental automatically.
-        set_proton_experimental_enabled(voile_root, true)?;
-        return Ok(());
-    };
+    OptionalProton::Experimental.install(voile_root).await
+}
 
-    refresh(voile_root).await;
-    let asset = wanted(voile_root)
-        .proton_experimental
-        .ok_or(Failure::Download)?;
+/// Whether the player opted in to installing and keeping the optional
+/// Proton-GE runtime (off by default).
+pub fn proton_ge_enabled(voile_root: &Path) -> bool {
+    OptionalProton::Ge.enabled(voile_root)
+}
 
-    fs::create_dir_all(voile_root)?;
-    let work = tempfile::Builder::new()
-        .prefix(UNFINISHED)
-        .tempdir_in(voile_root)?;
-    let client = reqwest::Client::builder()
-        .https_only(true)
-        .user_agent(USER_AGENT)
-        .connect_timeout(Duration::from_secs(20))
-        .read_timeout(Duration::from_secs(60))
-        .build()
-        .map_err(|_| Failure::Download)?;
-    let progress = Install::new();
-    let mut received = 0_u64;
-    let tarball = download_asset(
-        &client,
-        &asset,
-        work.path(),
-        "wine-proton-experimental.tar.gz",
-        &progress,
-        &mut received,
-        asset.size,
-    )
-    .await?;
+/// Records whether the player opted in to the optional Proton-GE runtime.
+pub fn set_proton_ge_enabled(voile_root: &Path, enabled: bool) -> std::io::Result<()> {
+    OptionalProton::Ge.set_enabled(voile_root, enabled)
+}
 
-    let voile_root = voile_root.to_owned();
-    tokio::task::spawn_blocking(move || {
-        let staging_parent = tempfile::Builder::new()
-            .prefix(UNFINISHED)
-            .tempdir_in(&linux_dir)?;
-        let staged = staging_parent.path().join("wine-proton-experimental");
-        fs::create_dir_all(&staged)?;
-        let status = std::process::Command::new("/usr/bin/tar")
-            .arg("-xzf")
-            .arg(&tarball)
-            .arg("-C")
-            .arg(&staged)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()?;
-        if !status.success() || !staged.join("bin/wine").is_file() {
-            return Err(Failure::Damaged);
-        }
-        let dst = linux_dir.join("wine-proton-experimental");
-        let old = if dst.exists() {
-            let old = staging_parent.path().join("old-proton-experimental");
-            fs::rename(&dst, &old)?;
-            Some(old)
-        } else {
-            None
-        };
-        if let Err(err) = fs::rename(&staged, &dst) {
-            if let Some(old) = old {
-                let _ = fs::rename(old, &dst);
-            }
-            return Err(err.into());
-        }
-        drop(staging_parent);
-        set_proton_experimental_enabled(&voile_root, true)?;
-        update_stamp_proton_experimental(&voile_root, true);
-        Ok(())
-    })
-    .await
-    .map_err(|_| Failure::Storage)?
+/// Whether Proton-GE binaries are currently installed on disk.
+pub fn proton_ge_installed(voile_root: &Path) -> bool {
+    OptionalProton::Ge.installed(voile_root)
+}
+
+/// Bytes occupied on disk by the installed Proton-GE runtime (0 if not installed).
+pub fn proton_ge_disk_bytes(voile_root: &Path) -> u64 {
+    OptionalProton::Ge.disk_bytes(voile_root)
+}
+
+/// Compressed archive size in bytes for the optional Proton-GE runtime in the
+/// current overlay release.
+pub fn proton_ge_download_bytes(voile_root: &Path) -> u64 {
+    OptionalProton::Ge.download_bytes(voile_root)
+}
+
+/// Removes the installed Proton-GE runtime from disk to reclaim storage space
+/// and clears the opt-in preference. Returns the number of bytes freed.
+pub fn offload_proton_ge(voile_root: &Path) -> std::io::Result<u64> {
+    OptionalProton::Ge.offload(voile_root)
+}
+
+/// Opts in to Proton-GE and, if the Linux engine runtime is already installed,
+/// downloads and extracts only the Proton-GE archive right away.
+pub async fn install_proton_ge(voile_root: &Path) -> Result<(), Failure> {
+    OptionalProton::Ge.install(voile_root).await
 }
 
 fn read_stamp(current_dir: &Path) -> Option<OverlayStamp> {
@@ -372,6 +489,7 @@ fn is_valid_release(rel: &OverlayRelease) -> bool {
         && rel.gst_rtsp_root.as_ref().is_none_or(is_valid_asset)
         && rel.wine_media_clipboard.as_ref().is_none_or(is_valid_asset)
         && rel.proton_experimental.as_ref().is_none_or(is_valid_asset)
+        && rel.proton_ge.as_ref().is_none_or(is_valid_asset)
 }
 
 /// Whether the Obelisk FX runtime overlay should be installed or updated in
@@ -400,7 +518,10 @@ pub(crate) fn needs_install(voile_root: &Path) -> bool {
         let pe_ok = !proton_experimental_enabled(voile_root)
             || wanted.proton_experimental.is_none()
             || (stamp.proton_experimental && proton_experimental_installed(voile_root));
-        !(stamp.tag == wanted.tag && base_matches && wsd_present && pe_ok)
+        let ge_ok = !proton_ge_enabled(voile_root)
+            || wanted.proton_ge.is_none()
+            || (stamp.proton_ge && proton_ge_installed(voile_root));
+        !(stamp.tag == wanted.tag && base_matches && wsd_present && pe_ok && ge_ok)
     } else {
         // No Voile/current yet: apply overlay as soon as a base Voile with Linux engine exists.
         base_name.is_some_and(|name| {
@@ -476,6 +597,7 @@ pub(crate) async fn refresh(voile_root: &Path) {
         resolve_asset(&client, &gh.assets, "wine-media-clipboard-x86_64.tar.gz").await;
     let proton_experimental =
         resolve_asset(&client, &gh.assets, "wine-proton-experimental-x86_64.tar.gz").await;
+    let proton_ge = resolve_asset(&client, &gh.assets, "wine-proton-ge-x86_64.tar.gz").await;
 
     let release = OverlayRelease {
         tag: gh.tag_name,
@@ -487,6 +609,7 @@ pub(crate) async fn refresh(voile_root: &Path) {
         gst_rtsp_root,
         wine_media_clipboard,
         proton_experimental,
+        proton_ge,
     };
     if !is_valid_release(&release) {
         return;
@@ -590,6 +713,7 @@ pub(crate) async fn install(
     let want_wine = wine_compat && overlay.wine_media_clipboard.is_some();
     let want_proton_exp =
         proton_experimental_enabled(voile_root) && overlay.proton_experimental.is_some();
+    let want_proton_ge = proton_ge_enabled(voile_root) && overlay.proton_ge.is_some();
 
     let mut total = overlay.wsd.size;
     if let Some(a) = &overlay.fexdarwin_run {
@@ -611,6 +735,9 @@ pub(crate) async fn install(
     if want_proton_exp {
         total += overlay.proton_experimental.as_ref().unwrap().size;
     }
+    if want_proton_ge {
+        total += overlay.proton_ge.as_ref().unwrap().size;
+    }
     progress.set_progress(0, total);
 
     let work = tempfile::Builder::new()
@@ -625,6 +752,7 @@ pub(crate) async fn install(
         want_gst_root,
         want_wine,
         want_proton_exp,
+        want_proton_ge,
         work.path(),
         progress,
         &mut received,
@@ -666,6 +794,7 @@ struct DownloadedFiles {
     gst_rtsp_root: Option<PathBuf>,
     wine_media_clipboard: Option<PathBuf>,
     proton_experimental: Option<PathBuf>,
+    proton_ge: Option<PathBuf>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -676,6 +805,7 @@ async fn download_all(
     want_gst_root: bool,
     want_wine: bool,
     want_proton_exp: bool,
+    want_proton_ge: bool,
     dir: &Path,
     progress: &Install,
     received: &mut u64,
@@ -787,6 +917,23 @@ async fn download_all(
         None
     };
 
+    let proton_ge = if want_proton_ge {
+        Some(
+            download_asset(
+                &client,
+                overlay.proton_ge.as_ref().unwrap(),
+                dir,
+                "wine-proton-ge.tar.gz",
+                progress,
+                received,
+                total,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+
     Ok(DownloadedFiles {
         wsd,
         fexdarwin_run,
@@ -796,6 +943,7 @@ async fn download_all(
         gst_rtsp_root,
         wine_media_clipboard,
         proton_experimental,
+        proton_ge,
     })
 }
 
@@ -1023,10 +1171,31 @@ fn apply_staged_inner(
         }
     }
 
+    if let Some(tarball) = &files.proton_ge {
+        let proton_dst = staged.join("linux/wine-proton-ge");
+        if proton_dst.exists() {
+            fs::remove_dir_all(&proton_dst)?;
+        }
+        fs::create_dir_all(&proton_dst)?;
+        let status = std::process::Command::new("/usr/bin/tar")
+            .arg("-xzf")
+            .arg(tarball)
+            .arg("-C")
+            .arg(&proton_dst)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err(Failure::Damaged);
+        }
+    }
+
     let stamp = OverlayStamp {
         tag: tag.to_owned(),
         base_voile: base_version.to_owned(),
         proton_experimental: files.proton_experimental.is_some(),
+        proton_ge: files.proton_ge.is_some(),
     };
     fs::write(
         staged.join(STAMP_FILE),
@@ -1141,10 +1310,11 @@ mod tests {
     fn built_in_release_has_valid_urls_and_checksums() {
         let rel = built_in();
         assert!(is_valid_release(&rel));
-        assert_eq!(rel.tag, "v0.1.8-metalfx");
+        assert_eq!(rel.tag, "v0.1.9-metalfx");
         assert!(rel.neptune_windows.is_some());
         assert!(rel.gst_rtsp_root.is_some());
         assert!(rel.proton_experimental.is_some());
+        assert!(rel.proton_ge.is_some());
     }
 
     #[test]
@@ -1269,8 +1439,9 @@ mod tests {
             gst_rtsp_root: Some(gst_tarball),
             wine_media_clipboard: Some(tarball),
             proton_experimental: None,
+            proton_ge: None,
         };
-        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.8-metalfx", &files, false)
+        apply_staged_inner(&root, &prefixes, &base, "v26.3.0-26", "v0.1.9-metalfx", &files, false)
             .unwrap();
 
         assert_eq!(
@@ -1343,7 +1514,7 @@ mod tests {
         fs::create_dir_all(pe.join("bin")).unwrap();
         fs::write(pe.join("bin/wine"), vec![0u8; 4096]).unwrap();
         fs::write(pe.join("extra.bin"), vec![1u8; 8192]).unwrap();
-        update_stamp_proton_experimental(&root, true);
+        OptionalProton::Experimental.update_stamp(&root, true);
         assert!(proton_experimental_installed(&root));
         assert_eq!(proton_experimental_disk_bytes(&root), 4096 + 8192);
         assert!(!needs_install(&root));

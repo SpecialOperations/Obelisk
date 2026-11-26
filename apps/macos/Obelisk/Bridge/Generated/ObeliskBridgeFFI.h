@@ -1039,6 +1039,11 @@ uint32_t uniffi_obelisk_bridge_fn_func_end_orphaned_windows_games(RustBuffer loc
 uint64_t uniffi_obelisk_bridge_fn_func_install_proton_experimental(RustBuffer locations
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_INSTALL_PROTON_GE
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_INSTALL_PROTON_GE
+uint64_t uniffi_obelisk_bridge_fn_func_install_proton_ge(RustBuffer locations
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_INSTALLED_VOILE_RELEASE
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_INSTALLED_VOILE_RELEASE
 RustBuffer uniffi_obelisk_bridge_fn_func_installed_voile_release(RustBuffer locations, RustCallStatus *_Nonnull out_status
@@ -1054,14 +1059,29 @@ RustBuffer uniffi_obelisk_bridge_fn_func_obelisk_locations(RustBuffer library, R
 RustBuffer uniffi_obelisk_bridge_fn_func_offload_proton_experimental(RustBuffer locations, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_OFFLOAD_PROTON_GE
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_OFFLOAD_PROTON_GE
+RustBuffer uniffi_obelisk_bridge_fn_func_offload_proton_ge(RustBuffer locations, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_PROTON_EXPERIMENTAL_STATUS
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_PROTON_EXPERIMENTAL_STATUS
 RustBuffer uniffi_obelisk_bridge_fn_func_proton_experimental_status(RustBuffer locations, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_PROTON_GE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_PROTON_GE_STATUS
+RustBuffer uniffi_obelisk_bridge_fn_func_proton_ge_status(RustBuffer locations, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_SET_PROTON_EXPERIMENTAL_ENABLED
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_SET_PROTON_EXPERIMENTAL_ENABLED
 RustBuffer uniffi_obelisk_bridge_fn_func_set_proton_experimental_enabled(RustBuffer locations, int8_t enabled, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_SET_PROTON_GE_ENABLED
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_SET_PROTON_GE_ENABLED
+RustBuffer uniffi_obelisk_bridge_fn_func_set_proton_ge_enabled(RustBuffer locations, int8_t enabled, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_TAKE_VOILE_PRERELEASES
@@ -1470,6 +1490,12 @@ uint16_t uniffi_obelisk_bridge_checksum_func_install_proton_experimental(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_INSTALL_PROTON_GE
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_INSTALL_PROTON_GE
+uint16_t uniffi_obelisk_bridge_checksum_func_install_proton_ge(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_INSTALLED_VOILE_RELEASE
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_INSTALLED_VOILE_RELEASE
 uint16_t uniffi_obelisk_bridge_checksum_func_installed_voile_release(void
@@ -1488,15 +1514,33 @@ uint16_t uniffi_obelisk_bridge_checksum_func_offload_proton_experimental(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_OFFLOAD_PROTON_GE
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_OFFLOAD_PROTON_GE
+uint16_t uniffi_obelisk_bridge_checksum_func_offload_proton_ge(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_PROTON_EXPERIMENTAL_STATUS
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_PROTON_EXPERIMENTAL_STATUS
 uint16_t uniffi_obelisk_bridge_checksum_func_proton_experimental_status(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_PROTON_GE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_PROTON_GE_STATUS
+uint16_t uniffi_obelisk_bridge_checksum_func_proton_ge_status(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_SET_PROTON_EXPERIMENTAL_ENABLED
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_SET_PROTON_EXPERIMENTAL_ENABLED
 uint16_t uniffi_obelisk_bridge_checksum_func_set_proton_experimental_enabled(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_SET_PROTON_GE_ENABLED
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_SET_PROTON_GE_ENABLED
+uint16_t uniffi_obelisk_bridge_checksum_func_set_proton_ge_enabled(void
     
 );
 #endif

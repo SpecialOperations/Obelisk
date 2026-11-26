@@ -47,6 +47,10 @@ fn prefix_on(engine: Engine, locations: &Locations, install: &Path) -> PathBuf {
             .wine_prefixes
             .join(format!("{name}-proton-experimental"))
             .join("prefix"),
+        Engine::ProtonGe => locations
+            .wine_prefixes
+            .join(format!("{name}-proton-ge"))
+            .join("prefix"),
     }
 }
 

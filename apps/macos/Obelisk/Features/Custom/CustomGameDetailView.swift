@@ -206,6 +206,7 @@ struct CustomGameDetailView: View {
         case .rosetta: L10n.string("ui.custom.engine_rosetta")
         case .linux: L10n.string("ui.custom.engine_linux")
         case .protonExperimental: L10n.string("ui.custom.engine_proton_experimental")
+        case .protonGe: L10n.string("ui.custom.engine_proton_ge")
         }
     }
 

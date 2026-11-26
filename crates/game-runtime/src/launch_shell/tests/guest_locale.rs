@@ -107,7 +107,7 @@ fn runtime_for(locations: &Locations, install: &Path, engine: Engine) -> PathBuf
             record_calls(&runtime);
             runtime
         }
-        Engine::Linux | Engine::ProtonExperimental => {
+        Engine::Linux | Engine::ProtonExperimental | Engine::ProtonGe => {
             let runtime = engine_runtime(locations);
             let prefix = engine
                 .prefix(&locations.wine_prefixes, install)

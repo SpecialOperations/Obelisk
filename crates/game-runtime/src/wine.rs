@@ -56,6 +56,9 @@ pub enum Engine {
     /// Valve's Proton Experimental (Wine 11.0) built with Obelisk's Voile
     /// drivers, running natively under voile-lkd.
     ProtonExperimental,
+    /// GloriousEggroll's Proton-GE (GE-Proton) built with Obelisk's Voile
+    /// drivers, running natively under voile-lkd.
+    ProtonGe,
 }
 
 /// The graphics backend that renders a Windows game's Direct3D 10 to 12
@@ -405,6 +408,7 @@ impl Engine {
             Self::Rosetta => &rosetta::RosettaWine,
             Self::Linux => &linux_engine::LinuxEngine,
             Self::ProtonExperimental => &linux_engine::ProtonExperimentalEngine,
+            Self::ProtonGe => &linux_engine::ProtonGeEngine,
         }
     }
 
@@ -642,7 +646,12 @@ fn remove_prefixes(
     rosetta: &Path,
 ) -> Result<(), obelisk_core::installation::RemovalFailure> {
     use obelisk_core::installation::RemovalFailure;
-    for engine in [Engine::Linux, Engine::ProtonExperimental, Engine::Rosetta] {
+    for engine in [
+        Engine::Linux,
+        Engine::ProtonExperimental,
+        Engine::ProtonGe,
+        Engine::Rosetta,
+    ] {
         let adapter = engine.adapter();
         let prefix = adapter
             .prefix(rosetta)

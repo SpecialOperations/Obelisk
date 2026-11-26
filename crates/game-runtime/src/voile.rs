@@ -36,9 +36,11 @@ use feed::Offered;
 pub(crate) use feed::refresh;
 pub use feed::take_prereleases;
 pub use fx_overlay::{
-    install_proton_experimental, offload_proton_experimental, proton_experimental_disk_bytes,
-    proton_experimental_download_bytes, proton_experimental_enabled,
-    proton_experimental_installed, set_proton_experimental_enabled,
+    install_proton_experimental, install_proton_ge, offload_proton_experimental, offload_proton_ge,
+    proton_experimental_disk_bytes, proton_experimental_download_bytes,
+    proton_experimental_enabled, proton_experimental_installed, proton_ge_disk_bytes,
+    proton_ge_download_bytes, proton_ge_enabled, proton_ge_installed,
+    set_proton_experimental_enabled, set_proton_ge_enabled,
 };
 
 const RELEASE: &str = include_str!("../voile-release.json");
@@ -574,6 +576,7 @@ pub fn remove_replaced(root: &Path) {
             && name != feed::PRERELEASES
             && name != fx_overlay::FEED_FILE
             && name != fx_overlay::PROTON_EXPERIMENTAL_OPT_IN
+            && name != fx_overlay::PROTON_GE_OPT_IN
             && !name.starts_with(UNFINISHED)
     });
 }

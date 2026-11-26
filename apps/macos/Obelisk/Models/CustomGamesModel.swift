@@ -283,6 +283,11 @@ final class CustomGamesModel {
         return status.enabled || status.installed
     }
 
+    var offersProtonGe: Bool {
+        let status = protonGeStatus(locations: locations)
+        return status.enabled || status.installed
+    }
+
     func downloadEngine() async {
         guard !isDownloadingEngine else { return }
         isDownloadingEngine = true

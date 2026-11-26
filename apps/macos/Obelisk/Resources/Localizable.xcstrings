@@ -29865,6 +29865,59 @@
         }
       }
     },
+    "ui.custom.engine_proton_ge": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE (Linux / FEX)"
+          }
+        }
+      }
+    },
     "ui.custom.engine_rosetta": {
       "extractionState": "manual",
       "localizations": {
@@ -42300,6 +42353,112 @@
         }
       }
     },
+    "ui.launch_settings.engine.proton_ge": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        }
+      }
+    },
+    "ui.launch_settings.engine.proton_ge_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GloriousEggrolls GE-Proton (Wine 11.0 + GE-Patches & FFmpeg-Videostack) auf der Linux-Engine. Frühe Vorschau; nutzt ein eigenes Präfix."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GloriousEggroll's GE-Proton (Wine 11.0 + GE patches & FFmpeg video stack) on the Linux engine. Early preview; uses its own prefix."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GE-Proton de GloriousEggroll (Wine 11.0 + parches GE y vídeo FFmpeg) en el motor Linux. Vista previa temprana; usa su propio prefijo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GE-Proton de GloriousEggroll (Wine 11.0 + correctifs GE et vidéo FFmpeg) sur le moteur Linux. Aperçu précoce ; utilise son propre préfixe."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GE-Proton di GloriousEggroll (Wine 11.0 + patch GE e video FFmpeg) sul motore Linux. Anteprima iniziale; utilizza un proprio prefisso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linux エンジン上の GloriousEggroll 製 GE-Proton（Wine 11.0 + GE パッチ & FFmpeg 動画スタック）。早期プレビュー、専用プレフィックスを使用します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GE-Proton do GloriousEggroll (Wine 11.0 + patches GE e vídeo FFmpeg) no motor Linux. Prévia inicial; usa seu próprio prefixo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linux 引擎上的 GloriousEggroll GE-Proton（Wine 11.0 + GE 补丁与 FFmpeg 视频栈）。早期预览版，使用独立前缀。"
+          }
+        }
+      }
+    },
     "ui.launch_settings.engine.rosetta": {
       "extractionState": "manual",
       "localizations": {
@@ -51266,6 +51425,377 @@
           "stringUnit": {
             "state": "translated",
             "value": "已启用 • 下次启动 Windows 游戏时将随运行时一起下载"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge_description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optionale frühe Vorschau von GloriousEggrolls GE-Proton (Wine 11.0 + Wine-Staging, Spiele-Patches & FFmpeg-Videostack) auf der Linux-Engine. Standardmäßig nicht enthalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opt-in early preview of GloriousEggroll's GE-Proton (Wine 11.0 + Wine-Staging, game patches & FFmpeg video stack) on the Linux engine. Not included by default."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista previa temprana opcional de GE-Proton de GloriousEggroll (Wine 11.0 + Wine-Staging, parches para juegos y vídeo FFmpeg) en el motor Linux. No se incluye por defecto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu précoce facultatif de GE-Proton de GloriousEggroll (Wine 11.0 + Wine-Staging, correctifs de jeux et vidéo FFmpeg) sur le moteur Linux. Non inclus par défaut."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima iniziale facoltativa di GE-Proton di GloriousEggroll (Wine 11.0 + Wine-Staging, patch per giochi e video FFmpeg) sul motore Linux. Non inclusa per impostazione predefinita."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linux エンジン上の GloriousEggroll 製 GE-Proton（Wine 11.0 + Wine-Staging・ゲームパッチ・FFmpeg 動画スタック）のオプトイン早期プレビュー。デフォルトでは含まれません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prévia inicial opcional do GE-Proton do GloriousEggroll (Wine 11.0 + Wine-Staging, patches para jogos e vídeo FFmpeg) no motor Linux. Não incluído por padrão."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Linux 引擎上 GloriousEggroll GE-Proton（Wine 11.0 + Wine-Staging、游戏补丁与 FFmpeg 视频栈）的可选早期预览版。默认不包含。"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge_downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE wird heruntergeladen und installiert…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading and installing Proton-GE…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando e instalando Proton-GE…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement et installation de Proton-GE…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download e installazione di Proton-GE…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE をダウンロードしてインストール中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando e instalando o Proton-GE…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载并安装 Proton-GE…"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE konnte nicht aktualisiert werden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE could not be updated"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo actualizar Proton-GE"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de mettre à jour Proton-GE"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aggiornare Proton-GE"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE を更新できませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível atualizar o Proton-GE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新 Proton-GE"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge_offload_help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entfernt Proton-GE, um Speicherplatz freizugeben. Kann jederzeit wieder aktiviert werden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Proton-GE to free disk space. You can re-enable it anytime."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina Proton-GE para liberar espacio en disco. Puedes volver a activarlo en cualquier momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprime Proton-GE pour libérer de l'espace disque. Vous pouvez le réactiver à tout moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuove Proton-GE per liberare spazio su disco. Puoi riattivarlo in qualsiasi momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE を削除してディスク容量を解放します。いつでも再度有効にできます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove o Proton-GE para liberar espaço em disco. Você pode reativá-lo a qualquer momento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除 Proton-GE 以释放磁盘空间。你随时可以重新启用。"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_ge_offloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE wird entfernt…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removing Proton-GE…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminando Proton-GE…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suppression de Proton-GE…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimozione di Proton-GE…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proton-GE を削除中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removendo o Proton-GE…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在卸载 Proton-GE…"
+          }
+        }
+      }
+    },
+    "ui.settings.proton_not_installed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht installiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not installed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No instalado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non installé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non installato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未インストール"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não instalado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未安装"
           }
         }
       }

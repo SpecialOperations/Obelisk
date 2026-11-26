@@ -735,7 +735,7 @@ pub(crate) fn a_private_file_lives_as_long_as_its_game_and_is_placed_where_the_e
             wine::Engine::Rosetta => {
                 PathBuf::from(given.strip_prefix("Z:").unwrap().replace('\\', "/"))
             }
-            wine::Engine::Linux | wine::Engine::ProtonExperimental => wine
+            wine::Engine::Linux | wine::Engine::ProtonExperimental | wine::Engine::ProtonGe => wine
                 .prefix
                 .join("drive_c")
                 .join(given.strip_prefix("C:\\").unwrap().replace('\\', "/")),

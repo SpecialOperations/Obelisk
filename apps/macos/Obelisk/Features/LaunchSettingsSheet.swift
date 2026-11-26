@@ -153,12 +153,19 @@ struct LaunchSettingsSheet: View {
     @Bindable var model: LaunchSettingsModel
     let gameName: String
     var offersProtonExperimental: Bool = LaunchSettingsSheet.liveOffersProtonExperimental
+    var offersProtonGe: Bool = LaunchSettingsSheet.liveOffersProtonGe
     @FocusState private var editsArguments: Bool
     @Environment(\.dismiss) private var dismiss
 
     private static var liveOffersProtonExperimental: Bool {
         guard !AppIdentity.isTestHost else { return true }
         let status = protonExperimentalStatus(locations: .live)
+        return status.enabled || status.installed
+    }
+
+    private static var liveOffersProtonGe: Bool {
+        guard !AppIdentity.isTestHost else { return true }
+        let status = protonGeStatus(locations: .live)
         return status.enabled || status.installed
     }
 
@@ -288,9 +295,14 @@ struct LaunchSettingsSheet: View {
 
     private func engineRow(_ settings: LaunchSettings) -> some View {
         let visibleEngines = settings.engines.filter { offer in
-            offer.engine != .protonExperimental
-                || offersProtonExperimental
-                || settings.engine == .protonExperimental
+            switch offer.engine {
+            case .protonExperimental:
+                return offersProtonExperimental || settings.engine == .protonExperimental
+            case .protonGe:
+                return offersProtonGe || settings.engine == .protonGe
+            case .rosetta, .linux:
+                return true
+            }
         }
         return ObeliskRow(title: L10n.string("ui.launch_settings.engine")) {
             SymbolTile(name: "gearshape.2.fill", colors: TileColors.violet)
@@ -484,6 +496,7 @@ struct LaunchSettingsSheet: View {
         case .rosetta: L10n.string("ui.launch_settings.engine.rosetta")
         case .linux: L10n.string("ui.launch_settings.engine.linux")
         case .protonExperimental: L10n.string("ui.launch_settings.engine.proton_experimental")
+        case .protonGe: L10n.string("ui.launch_settings.engine.proton_ge")
         }
     }
 
@@ -492,6 +505,7 @@ struct LaunchSettingsSheet: View {
         case .rosetta: L10n.string("ui.launch_settings.engine.rosetta_detail")
         case .linux: L10n.string("ui.launch_settings.engine.linux_detail")
         case .protonExperimental: L10n.string("ui.launch_settings.engine.proton_experimental_detail")
+        case .protonGe: L10n.string("ui.launch_settings.engine.proton_ge_detail")
         }
     }
 

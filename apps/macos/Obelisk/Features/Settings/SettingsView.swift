@@ -59,6 +59,8 @@ struct SettingsView: View {
                             sharePerformance
                             ObeliskCardDivider()
                             protonExperimental
+                            ObeliskCardDivider()
+                            protonGe
                         }
                     }
                     GamePageSection(title: L10n.string("ui.settings.storage")) {
@@ -140,7 +142,11 @@ struct SettingsView: View {
         }
         .errorAlert(L10n.string("ui.settings.games_folder_failed"), message: Bindable(model.gamesFolder).failure)
         .errorAlert(L10n.string("ui.settings.proton_experimental_failed"), message: Bindable(model.protonExperimental).error)
-        .onAppear { model.protonExperimental.refresh() }
+        .errorAlert(L10n.string("ui.settings.proton_ge_failed"), message: Bindable(model.protonGe).error)
+        .onAppear {
+            model.protonExperimental.refresh()
+            model.protonGe.refresh()
+        }
     }
 
     /// Clearly identifies Obelisk FX as a community fork and points users to
@@ -258,15 +264,55 @@ struct SettingsView: View {
     }
 
     private var protonExperimental: some View {
-        let pe = model.protonExperimental
+        optionalProtonRow(
+            pe: model.protonExperimental,
+            titleKey: "ui.settings.proton_experimental",
+            descriptionKey: "ui.settings.proton_experimental_description",
+            downloadingKey: "ui.settings.proton_experimental_downloading",
+            offloadingKey: "ui.settings.proton_experimental_offloading",
+            offloadHelpKey: "ui.settings.proton_experimental_offload_help",
+            symbol: "testtube.2",
+            colors: TileColors.gold,
+            toggleIdentifier: "settings-proton-experimental",
+            offloadIdentifier: "settings-proton-experimental-offload"
+        )
+    }
+
+    private var protonGe: some View {
+        optionalProtonRow(
+            pe: model.protonGe,
+            titleKey: "ui.settings.proton_ge",
+            descriptionKey: "ui.settings.proton_ge_description",
+            downloadingKey: "ui.settings.proton_ge_downloading",
+            offloadingKey: "ui.settings.proton_ge_offloading",
+            offloadHelpKey: "ui.settings.proton_ge_offload_help",
+            symbol: "flame.fill",
+            colors: TileColors.red,
+            toggleIdentifier: "settings-proton-ge",
+            offloadIdentifier: "settings-proton-ge-offload"
+        )
+    }
+
+    private func optionalProtonRow(
+        pe: OptionalProtonModel,
+        titleKey: String,
+        descriptionKey: String,
+        downloadingKey: String,
+        offloadingKey: String,
+        offloadHelpKey: String,
+        symbol: String,
+        colors: [Color],
+        toggleIdentifier: String,
+        offloadIdentifier: String
+    ) -> some View {
         let status = pe.status
         let gameActive = model.runsGame || !model.custom.runningProcesses.isEmpty
-        return ObeliskRow(title: L10n.string("ui.settings.proton_experimental")) {
-            SymbolTile(name: "testtube.2", colors: TileColors.gold)
+        return ObeliskRow(title: L10n.string(titleKey)) {
+            SymbolTile(name: symbol, colors: colors)
         } detail: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("ui.settings.proton_experimental_description"))
-                Text(protonExperimentalStatusLine(pe))
+                Text(L10n.string(descriptionKey))
+                Text(optionalProtonStatusLine(pe, downloadingKey: downloadingKey, offloadingKey: offloadingKey))
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
             }
@@ -278,30 +324,34 @@ struct SettingsView: View {
                 } else if status.installed {
                     GlassCapsuleButton(title: L10n.string("ui.settings.proton_experimental_offload"),
                                        systemImage: "trash",
-                                       identifier: "settings-proton-experimental-offload") {
+                                       identifier: offloadIdentifier) {
                         pe.offload()
                     }
                     .disabled(gameActive)
-                    .help(L10n.string("ui.settings.proton_experimental_offload_help"))
+                    .help(L10n.string(offloadHelpKey))
                 }
-                Toggle(L10n.string("ui.settings.proton_experimental"),
+                Toggle(L10n.string(titleKey),
                        isOn: Binding(get: { status.enabled },
                                      set: { pe.setEnabled($0) }))
                     .toggleStyle(.switch)
                     .labelsHidden()
                     .pointerCursor()
                     .disabled(pe.isBusy || gameActive)
-                    .accessibilityIdentifier("settings-proton-experimental")
+                    .accessibilityIdentifier(toggleIdentifier)
             }
         }
     }
 
-    private func protonExperimentalStatusLine(_ pe: ProtonExperimentalModel) -> String {
+    private func optionalProtonStatusLine(
+        _ pe: OptionalProtonModel,
+        downloadingKey: String,
+        offloadingKey: String
+    ) -> String {
         switch pe.activity {
         case .installing:
-            return L10n.string("ui.settings.proton_experimental_downloading")
+            return L10n.string(downloadingKey)
         case .offloading:
-            return L10n.string("ui.settings.proton_experimental_offloading")
+            return L10n.string(offloadingKey)
         case nil:
             break
         }
@@ -315,8 +365,11 @@ struct SettingsView: View {
         if status.enabled {
             return L10n.string("ui.settings.proton_experimental_pending")
         }
-        let size = ByteCountFormatter.string(fromByteCount: Int64(status.downloadBytes), countStyle: .file)
-        return L10n.string("ui.settings.proton_experimental_download_size", size)
+        if status.downloadBytes > 0 {
+            let size = ByteCountFormatter.string(fromByteCount: Int64(status.downloadBytes), countStyle: .file)
+            return L10n.string("ui.settings.proton_experimental_download_size", size)
+        }
+        return L10n.string("ui.settings.proton_not_installed")
     }
 
     private var overlay: some View {

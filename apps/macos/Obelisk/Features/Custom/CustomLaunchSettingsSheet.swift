@@ -100,6 +100,9 @@ struct CustomLaunchSettingsSheet: View {
                         if model.offersProtonExperimental || engine == .protonExperimental {
                             Text(L10n.string("ui.custom.engine_proton_experimental")).tag(LaunchEngine.protonExperimental)
                         }
+                        if model.offersProtonGe || engine == .protonGe {
+                            Text(L10n.string("ui.custom.engine_proton_ge")).tag(LaunchEngine.protonGe)
+                        }
                     } label: {
                         EmptyView()
                     }
@@ -260,6 +263,7 @@ struct CustomLaunchSettingsSheet: View {
         case .rosetta: L10n.string("ui.custom.engine_rosetta")
         case .linux: L10n.string("ui.custom.engine_linux")
         case .protonExperimental: L10n.string("ui.custom.engine_proton_experimental")
+        case .protonGe: L10n.string("ui.custom.engine_proton_ge")
         }
     }
 

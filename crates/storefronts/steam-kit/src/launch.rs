@@ -84,11 +84,16 @@ fn shared_error(error: obelisk_core::launch::LaunchError) -> LaunchError {
 }
 
 fn launch_rank(config: &LaunchConfig) -> Option<u8> {
-    // Special setup, uninstall, editor and VR entries must not become the default.
+    // Special uninstall, editor and VR entries must not become the default.
+    // A "config" entry ranks below every normal game entry so a standalone
+    // setup utility never displaces the game, while still working as a
+    // fallback when a publisher tags the platform's only launcher as "config"
+    // (for example Danganronpa 1 & 2's Windows Launcher.exe).
     match config.launch_type.to_ascii_lowercase().as_str() {
         "default" => Some(0),
         "" | "none" => Some(1),
         "option1" | "option2" | "option3" | "option4" => Some(2),
+        "config" => Some(3),
         _ => None,
     }
 }
@@ -144,6 +149,37 @@ mod tests {
         );
         assert_eq!(plan.target.arguments, ["--title", "My game"]);
         assert!(!plan.target.is_application_bundle);
+    }
+
+    #[test]
+    fn falls_back_to_config_launcher_when_it_is_the_only_platform_entry() {
+        // Danganronpa 1 & 2 tag their only Windows entry ("Launcher.exe -s")
+        // with type "config", while macOS has both a "config" launcher and a
+        // "none" direct-launch entry.
+        let root = tempfile::tempdir().unwrap();
+        file(root.path(), "Launcher.exe");
+        file(root.path(), "Danganronpa2.app/Contents/MacOS/Danganronpa2");
+        let mut win_launcher = config("Launcher.exe", "windows", "config");
+        win_launcher.arguments = "-s".into();
+        let game = app(vec![
+            win_launcher,
+            config("Launcher.app/Contents/MacOS/Launcher", "macos", "config"),
+            config("Danganronpa2.app/Contents/MacOS/Danganronpa2", "macos", "none"),
+        ]);
+
+        let win_plan = plan(&game, Platform::Windows, root.path()).unwrap();
+        assert_eq!(
+            Path::new(&win_plan.target.executable).file_name().unwrap(),
+            "Launcher.exe"
+        );
+        assert_eq!(win_plan.target.arguments, ["-s"]);
+
+        // macOS still prefers "none" over "config".
+        let mac_plan = plan(&game, Platform::Mac, root.path()).unwrap();
+        assert_eq!(
+            Path::new(&mac_plan.target.executable).file_name().unwrap(),
+            "Danganronpa2"
+        );
     }
 
     #[test]

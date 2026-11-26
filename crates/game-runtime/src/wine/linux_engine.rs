@@ -61,6 +61,10 @@ const HOME: &str = "/home/user";
 const STEAM: &str = "/opt/steam";
 /// The runtime's guest libraries.
 const LIBRARIES: &str = "/opt/obelisk";
+/// Where Wine's mscoree looks for the runtime's Wine Mono inside the guest.
+const MONO_GUEST: &str = "/usr/share/wine/mono";
+/// Records, in a prefix, the Wine Mono version registered in it.
+const MONO_RECORD: &str = ".obelisk-mono";
 /// The library that gives Valve's steamclient the macOS pid of its process.
 const HOST_PID: &str = "steam-hostpid.so";
 /// The prefix's folder in the guest's home.
@@ -88,11 +92,15 @@ pub(super) struct LinuxEngine;
 /// Valve's Proton Experimental (Wine 11.0) built with Obelisk's Voile drivers.
 pub(super) struct ProtonExperimentalEngine;
 
+/// GloriousEggroll's Proton-GE (GE-Proton) built with Obelisk's Voile drivers.
+pub(super) struct ProtonGeEngine;
+
 /// Which Wine tree inside `linux/` backs this engine.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Variant {
     Voile,
     ProtonExperimental,
+    ProtonGe,
 }
 
 impl Variant {
@@ -100,6 +108,7 @@ impl Variant {
         match self {
             Self::Voile => "wine",
             Self::ProtonExperimental => "wine-proton-experimental",
+            Self::ProtonGe => "wine-proton-ge",
         }
     }
 
@@ -107,6 +116,7 @@ impl Variant {
         match self {
             Self::Voile => "-linux",
             Self::ProtonExperimental => "-proton-experimental",
+            Self::ProtonGe => "-proton-ge",
         }
     }
 
@@ -157,9 +167,19 @@ static PROTON_EXP_FACTS: Facts = Facts {
     programs: Programs::X86_64,
 };
 
+static PROTON_GE_FACTS: Facts = Facts {
+    name: "proton-ge",
+    input_service: None,
+    graphics: Graphics::Dxmt,
+    launcher_grace: Some(LAUNCHER_GRACE),
+    reserved: FACTS.reserved,
+    programs: Programs::X86_64,
+};
+
 fn variant_of(config: &Config) -> Variant {
     match config.settings.engine {
         super::Engine::ProtonExperimental => Variant::ProtonExperimental,
+        super::Engine::ProtonGe => Variant::ProtonGe,
         _ => Variant::Voile,
     }
 }
@@ -179,6 +199,85 @@ impl Adapter for ProtonExperimentalEngine {
 
     fn prefix(&self, rosetta: &Path) -> Result<PathBuf, Error> {
         prefix_for(rosetta, Variant::ProtonExperimental)
+    }
+
+    fn ready(
+        &self,
+        config: &Config,
+        locations: &crate::Locations,
+        storefront: &dyn Furnisher,
+    ) -> Result<(), Error> {
+        LinuxEngine.ready(config, locations, storefront)
+    }
+
+    fn target(
+        &self,
+        config: &Config,
+        game: &Game<'_>,
+        launched: &LaunchTarget,
+        program: PathBuf,
+        additions: Additions,
+        environment: HashMap<String, String>,
+    ) -> Result<Target, Error> {
+        LinuxEngine.target(config, game, launched, program, additions, environment)
+    }
+
+    fn private_file(
+        &self,
+        config: &Config,
+        name: &str,
+        bytes: &[u8],
+    ) -> Result<(tempfile::TempDir, String), Error> {
+        LinuxEngine.private_file(config, name, bytes)
+    }
+
+    fn quit_command(
+        &self,
+        config: &Config,
+        environment: &HashMap<String, String>,
+        program: Option<&Path>,
+        pid: u32,
+    ) -> Option<Command> {
+        LinuxEngine.quit_command(config, environment, program, pid)
+    }
+
+    fn end_command(&self, config: &Config) -> Option<Command> {
+        LinuxEngine.end_command(config)
+    }
+
+    fn private_folders(
+        &self,
+        config: &Config,
+        environment: &HashMap<String, String>,
+        pid: Option<u32>,
+    ) -> Vec<PathBuf> {
+        LinuxEngine.private_folders(config, environment, pid)
+    }
+
+    fn remove(
+        &self,
+        locations: &crate::Locations,
+        prefix: &Path,
+    ) -> Result<(), obelisk_core::installation::RemovalFailure> {
+        LinuxEngine.remove(locations, prefix)
+    }
+}
+
+impl Adapter for ProtonGeEngine {
+    fn facts(&self) -> &'static Facts {
+        &PROTON_GE_FACTS
+    }
+
+    fn architecture(&self, config: &Config) -> Architecture {
+        LinuxEngine.architecture(config)
+    }
+
+    fn runtime(&self, voile: &Path) -> Option<PathBuf> {
+        LinuxEngine.runtime(voile)
+    }
+
+    fn prefix(&self, rosetta: &Path) -> Result<PathBuf, Error> {
+        prefix_for(rosetta, Variant::ProtonGe)
     }
 
     fn ready(
@@ -293,8 +392,21 @@ impl Adapter for LinuxEngine {
             return Err(Error::WineIncomplete);
         }
         crate::files::private_directory(home(&config.prefix)?)?;
-        if !config.prefix.join("system.reg").is_file() {
-            boot(config)?;
+        let created = !config.prefix.join("system.reg").is_file();
+        if created {
+            boot(config, "--init")?;
+        }
+        // wineboot registers Wine Mono's .NET support package when it creates
+        // a prefix. A prefix created before the Linux engine bound Mono lacks
+        // it: updating the prefix once registers it.
+        if let Some((_, version)) = mono(config) {
+            let record = config.prefix.join(MONO_RECORD);
+            if fs::read_to_string(&record).unwrap_or_default() != version {
+                if !created {
+                    boot(config, "--update")?;
+                }
+                fs::write(record, version)?;
+            }
         }
         if storefront.additions().steam_client {
             link_steam_client(config)?;
@@ -516,6 +628,19 @@ fn installed(config: &Config) -> bool {
                 .is_file())
 }
 
+/// The Wine Mono folder the Voile release carries beside `linux/`, and its
+/// newest `wine-mono-*` directory (such as `wine-mono-10.4.1`). Wine Mono is
+/// pure Windows PE binaries, so the Linux engine shares Rosetta's copy.
+fn mono(config: &Config) -> Option<(PathBuf, String)> {
+    let dir = config.runtime.parent()?.join("share/wine/mono");
+    let version = fs::read_dir(&dir)
+        .ok()?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .filter(|name| name.starts_with("wine-mono-"))
+        .max()?;
+    Some((dir, version))
+}
+
 /// What every Wine command of the engine runs with in the guest, then the
 /// variables the game's profile adds. Wine takes its Windows locale from the
 /// guest's `LC_ALL`, and only from it: not from `LANG`, nor from the
@@ -529,6 +654,11 @@ fn guest_environment(config: &Config) -> Vec<(String, String)> {
         .locale
         .as_deref()
         .map(|locale| ("LC_ALL".to_owned(), format!("{locale}.UTF-8")));
+    let overrides = if mono(config).is_some() {
+        "mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n"
+    } else {
+        "mscoree,mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n"
+    };
     let own = [
         ("HOME", HOME.into()),
         ("USER", "user".into()),
@@ -538,11 +668,7 @@ fn guest_environment(config: &Config) -> Vec<(String, String)> {
         ("WINEPREFIX", format!("{HOME}/{PREFIX}")),
         ("WINEARCH", "win64".into()),
         ("WINEDEBUG", config.debug_channels()),
-        (
-            "WINEDLLOVERRIDES",
-            config
-                .with_profile_overrides("mscoree,mshtml=;winemenubuilder.exe=d;d3d11,dxgi,d3d12=n"),
-        ),
+        ("WINEDLLOVERRIDES", config.with_profile_overrides(overrides)),
         ("VTEST_SOCKET_NAME", "/run/obelisk/vtest.sock".into()),
         ("NPT_DEBUG", "force_vtest".into()),
     ];
@@ -564,9 +690,9 @@ fn guest_path(install: &Path, path: &Path) -> Option<String> {
     })
 }
 
-/// Creates the prefix through the engine, under its timeout wrapper, which
-/// ends every process of the engine it started.
-fn boot(config: &Config) -> Result<(), Error> {
+/// Creates or updates the prefix through the engine, under its timeout
+/// wrapper, which ends every process of the engine it started.
+fn boot(config: &Config, action: &str) -> Result<(), Error> {
     let engine = config.runtime.join("engine");
     let mut command = Command::new(engine.join("run-with-timeout.sh"));
     command
@@ -576,12 +702,9 @@ fn boot(config: &Config) -> Result<(), Error> {
     for (name, value) in guest_environment(config) {
         command.arg("--env").arg(format!("{name}={value}"));
     }
+    let script = format!("/opt/wine/bin/wine wineboot {action}; /opt/wine/bin/wineserver -w");
     let status = command
-        .args([
-            "/bin/sh",
-            "-c",
-            "/opt/wine/bin/wine wineboot --init; /opt/wine/bin/wineserver -w",
-        ])
+        .args(["/bin/sh", "-c", &script])
         .env_clear()
         .env("FEXDARWIN_LKD", "1")
         .env("FEXDARWIN_ROOT", config.runtime.join("root"))
@@ -607,6 +730,9 @@ fn binds(config: &Config, install: Option<&Path>) -> Result<String, Error> {
         ),
         format!("{HOME}={}", home(&config.prefix)?.display()),
     ];
+    if let Some((mono_dir, _)) = mono(config) {
+        binds.push(format!("{MONO_GUEST}={}:ro", mono_dir.display()));
+    }
     if let Some(install) = install {
         binds.push(format!("{GAME}={}", install.display()));
     }
@@ -707,6 +833,9 @@ impl Guest {
     /// where it gives that pid to Valve's steamclient alone.
     fn of(config: &Config, steam_client: bool) -> Self {
         let mut guest = Self::default();
+        if let Some((mono_dir, _)) = mono(config) {
+            guest.binds.push((MONO_GUEST, mono_dir));
+        }
         if !steam_client {
             return guest;
         }
