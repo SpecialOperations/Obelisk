@@ -1392,6 +1392,7 @@ fn a_configuration_reaches_its_game_session_whole() {
             voice_processing: true,
             game_mode: false,
             locale: Some("it_IT".into()),
+            vr_mode: crate::vr::VrMode::Auto,
         },
     };
 

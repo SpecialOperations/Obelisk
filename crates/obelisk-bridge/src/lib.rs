@@ -36,6 +36,8 @@ mod games_folder;
 pub use games_folder::{GamesFolder, GamesFolderInspection, GamesFolderState};
 mod launch_settings;
 pub use launch_settings::*;
+mod vr;
+pub use vr::*;
 mod presence;
 pub use presence::OnlineStatus;
 mod downloads;

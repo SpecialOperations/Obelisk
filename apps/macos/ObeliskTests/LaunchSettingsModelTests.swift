@@ -11,6 +11,7 @@ final class LaunchSettingsModelTests: XCTestCase {
             metalfxFramegen: engine == .linux && choices.metalfxFramegen,
             voiceProcessing: engine == .linux && choices.voiceProcessing,
             performanceHud: choices.performanceHud, gameMode: engine != .linux || choices.gameMode ?? true,
+            vrMode: choices.vrMode ?? .off,
             choices: choices, defaultEngine: .rosetta,
             engines: [
                 LaunchEngineOffer(

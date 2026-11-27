@@ -11,6 +11,7 @@ struct SidebarView: View {
             Section {
                 ForEach(model.accounts, id: \.slot) { row($0.tab, title: model.title(of: $0)) }
                 row(.custom, title: LibrarySection.custom.title)
+                row(.vr, title: LibrarySection.vr.title)
             } header: {
                 Text(L10n.string("ui.library.title"))
                     .font(.system(size: 13, weight: .semibold))

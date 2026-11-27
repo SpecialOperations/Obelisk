@@ -19,6 +19,7 @@
 //! predates `--render-percent` ignores it.
 use crate::{
     profile::{self, Profile},
+    vr::VrMode,
     wine::{Engine, Graphics, GraphicsOptions},
 };
 use obelisk_core::launch::LaunchTarget;
@@ -85,6 +86,9 @@ pub struct Settings {
     /// game's environment instead.
     #[serde(default)]
     pub locale: Option<String>,
+    /// Virtual reality runtime mode (OpenXR, OpenComposite, or real SteamVR).
+    #[serde(default)]
+    pub vr_mode: VrMode,
 }
 
 /// How a game no profile names runs without choices: in Rosetta's Wine,
@@ -128,7 +132,33 @@ impl Settings {
             .arguments
             .extend(self.profile_arguments.iter().cloned());
         started.arguments.extend(self.arguments.iter().cloned());
+        if self.vr_mode.is_enabled() {
+            strip_flat_vr_arguments(&mut started.arguments);
+            let dx11_args = crate::vr::detect(install).dx11_arguments(&started.arguments);
+            started.arguments.extend(dx11_args);
+        }
         started
+    }
+}
+
+/// Removes flat-desktop forcing flags (such as Steam's default `--no-vr` on
+/// VRChat) when the player explicitly enabled VR mode for this launch.
+fn strip_flat_vr_arguments(arguments: &mut Vec<String>) {
+    let mut i = 0;
+    while i < arguments.len() {
+        let lower = arguments[i].to_ascii_lowercase();
+        if lower == "--no-vr" || lower == "-nohmd" {
+            arguments.remove(i);
+            continue;
+        }
+        if lower == "-vrmode"
+            && i + 1 < arguments.len()
+            && arguments[i + 1].eq_ignore_ascii_case("none")
+        {
+            arguments.drain(i..=i + 1);
+            continue;
+        }
+        i += 1;
     }
 }
 
@@ -252,6 +282,9 @@ pub struct Choices {
     /// profile keeps it off: only what differs from the profile is kept.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_mode: Option<bool>,
+    /// Virtual reality runtime mode chosen by the player.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vr_mode: Option<VrMode>,
 }
 
 /// What translates a game's x86 code on one engine.
@@ -400,12 +433,19 @@ impl Choices {
     /// render resolution its engine does not offer falls back to the default
     /// one.
     fn apply(&self, profile: &Profile) -> Settings {
+        let vr_mode = self.vr_mode.unwrap_or(VrMode::Off);
         let engine = self.engine.unwrap_or(profile.engine);
         let offered = offer(engine);
         let graphics = self
             .graphics
             .filter(|graphics| offered.graphics(*graphics).is_some())
-            .unwrap_or(default_graphics(profile, engine));
+            .unwrap_or_else(|| {
+                if vr_mode.is_enabled() && engine == Engine::Rosetta {
+                    Graphics::Dxmt
+                } else {
+                    default_graphics(profile, engine)
+                }
+            });
         let options = default_options(profile, engine, graphics);
         Settings {
             engine,
@@ -432,6 +472,7 @@ impl Choices {
                 .filter(|_| offered.game_mode)
                 .unwrap_or(default_game_mode(profile, engine)),
             locale: None,
+            vr_mode,
         }
     }
 
@@ -439,7 +480,11 @@ impl Choices {
     /// engine gives by default, and without arguments that are only spaces.
     fn normalized(&self, profile: &Profile) -> Self {
         let applied = self.apply(profile);
-        let graphics = default_graphics(profile, applied.engine);
+        let graphics = if applied.vr_mode.is_enabled() && applied.engine == Engine::Rosetta {
+            Graphics::Dxmt
+        } else {
+            default_graphics(profile, applied.engine)
+        };
         let options = default_options(profile, applied.engine, applied.graphics);
         Self {
             arguments: self
@@ -460,6 +505,7 @@ impl Choices {
             performance_hud: self.performance_hud,
             game_mode: (applied.game_mode != default_game_mode(profile, applied.engine))
                 .then_some(applied.game_mode),
+            vr_mode: applied.vr_mode.is_enabled().then_some(applied.vr_mode),
         }
     }
 

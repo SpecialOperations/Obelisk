@@ -246,6 +246,11 @@ struct LaunchSettingsSheet: View {
                             }
                         }
                     }
+                    SheetSection(title: L10n.string("ui.launch_settings.vr")) {
+                        ObeliskCard {
+                            vrModeRow(settings)
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 22)
@@ -465,6 +470,25 @@ struct LaunchSettingsSheet: View {
         }
     }
 
+    private func vrModeRow(_ settings: LaunchSettings) -> some View {
+        ObeliskRow(title: L10n.string("ui.launch_settings.vr_mode")) {
+            SymbolTile(name: "visionpro", colors: TileColors.violet)
+        } detail: {
+            Text(Self.detail(of: settings.vrMode))
+        } accessory: {
+            GlassMenuPicker(title: L10n.string("ui.launch_settings.vr_mode"),
+                            value: marked(Self.name(of: settings.vrMode), isDefault: settings.vrMode == .off),
+                            selection: Binding(get: { settings.vrMode },
+                                               set: { mode in model.choose { $0.vrMode = mode == .off ? nil : mode } }),
+                            identifier: "launch-settings-vr-mode") {
+                ForEach([LaunchVrMode.off, .auto, .openXr, .openVr, .steamVr], id: \.self) { mode in
+                    Text(marked(Self.name(of: mode), isDefault: mode == .off))
+                        .tag(mode)
+                }
+            }
+        }
+    }
+
     /// When the choices apply, how to forget them, and why the last could not
     /// be kept.
     private var footer: some View {
@@ -527,6 +551,26 @@ struct LaunchSettingsSheet: View {
         switch graphics {
         case .d3dMetal: L10n.string("ui.launch_settings.graphics.d3dmetal_detail")
         case .dxmt: L10n.string("ui.launch_settings.graphics.dxmt_detail")
+        }
+    }
+
+    static func name(of vrMode: LaunchVrMode) -> String {
+        switch vrMode {
+        case .off: L10n.string("ui.launch_settings.vr.off")
+        case .auto: L10n.string("ui.launch_settings.vr.auto")
+        case .openXr: L10n.string("ui.launch_settings.vr.openxr")
+        case .openVr: L10n.string("ui.launch_settings.vr.openvr")
+        case .steamVr: L10n.string("ui.launch_settings.vr.steamvr")
+        }
+    }
+
+    static func detail(of vrMode: LaunchVrMode) -> String {
+        switch vrMode {
+        case .off: L10n.string("ui.launch_settings.vr.off_detail")
+        case .auto: L10n.string("ui.launch_settings.vr.auto_detail")
+        case .openXr: L10n.string("ui.launch_settings.vr.openxr_detail")
+        case .openVr: L10n.string("ui.launch_settings.vr.openvr_detail")
+        case .steamVr: L10n.string("ui.launch_settings.vr.steamvr_detail")
         }
     }
 }

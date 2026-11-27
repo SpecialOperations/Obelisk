@@ -121,6 +121,7 @@ fn every_kind_of_choices() -> [Choices; 5] {
             voice_processing: false,
             performance_hud: false,
             game_mode: Some(true),
+            vr_mode: None,
         },
         Choices {
             arguments: Some("-dx11 \"+exec autoexec.cfg\"".into()),

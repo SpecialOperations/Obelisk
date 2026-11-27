@@ -19,6 +19,7 @@ struct RootView: View {
                 // carries over to another's.
                 case .account(let slot): AccountLibraryView(model: model, slot: slot).id(slot)
                 case .custom: CustomGamesView(model: model.custom)
+                case .vr: VRView(model: model)
                 case .settings: SettingsView(model: model)
                 }
             }
@@ -84,7 +85,7 @@ private struct AccountLibraryView: View {
             if let account = model.epic[slot] { EpicView(model: account) }
         case .gog:
             if let account = model.gog[slot] { GogView(model: account) }
-        case .home, .settings, .custom:
+        case .home, .settings, .custom, .vr:
             EmptyView()
         }
     }

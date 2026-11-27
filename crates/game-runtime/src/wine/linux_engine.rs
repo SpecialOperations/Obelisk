@@ -205,9 +205,10 @@ impl Adapter for ProtonExperimentalEngine {
         &self,
         config: &Config,
         locations: &crate::Locations,
+        install: &Path,
         storefront: &dyn Furnisher,
     ) -> Result<(), Error> {
-        LinuxEngine.ready(config, locations, storefront)
+        LinuxEngine.ready(config, locations, install, storefront)
     }
 
     fn target(
@@ -284,9 +285,10 @@ impl Adapter for ProtonGeEngine {
         &self,
         config: &Config,
         locations: &crate::Locations,
+        install: &Path,
         storefront: &dyn Furnisher,
     ) -> Result<(), Error> {
-        LinuxEngine.ready(config, locations, storefront)
+        LinuxEngine.ready(config, locations, install, storefront)
     }
 
     fn target(
@@ -380,6 +382,7 @@ impl Adapter for LinuxEngine {
         &self,
         config: &Config,
         locations: &crate::Locations,
+        _install: &Path,
         storefront: &dyn Furnisher,
     ) -> Result<(), Error> {
         if !installed(config) {
@@ -419,6 +422,9 @@ impl Adapter for LinuxEngine {
         let copy = system32.join(NEPTUNE);
         if !copy.exists() {
             fs::copy(&neptune, copy)?;
+        }
+        if config.settings.vr_mode.is_enabled() {
+            crate::vr::prepare_linux_prefix(config, locations, _install)?;
         }
         match config.log.parent() {
             Some(logs) => crate::files::private_directory(logs)?,

@@ -1,7 +1,7 @@
 import Foundation
 
 enum LibrarySection: String, CaseIterable, Identifiable, Sendable {
-    case home, steam, epic, gog, custom, settings
+    case home, steam, epic, gog, custom, vr, settings
 
     var id: String { rawValue }
 
@@ -12,6 +12,7 @@ enum LibrarySection: String, CaseIterable, Identifiable, Sendable {
         case .epic: L10n.string("model.section.epic.title")
         case .gog: L10n.string("model.section.gog.title")
         case .custom: L10n.string("model.section.custom.title")
+        case .vr: L10n.string("model.section.vr.title")
         case .settings: L10n.string("model.section.settings.title")
         }
     }
@@ -23,6 +24,7 @@ enum LibrarySection: String, CaseIterable, Identifiable, Sendable {
         case .epic: "shield.lefthalf.filled"
         case .gog: "square.stack.3d.up"
         case .custom: "gamecontroller"
+        case .vr: "visionpro"
         case .settings: "gearshape"
         }
     }

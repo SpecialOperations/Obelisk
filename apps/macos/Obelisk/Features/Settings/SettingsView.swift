@@ -28,6 +28,8 @@ struct SettingsView: View {
                     ObeliskCard {
                         forkNotice
                         ObeliskCardDivider()
+                        vrminAttribution
+                        ObeliskCardDivider()
                         support
                     }
                     GamePageSection(title: L10n.string("ui.settings.appearance")) {
@@ -167,6 +169,20 @@ struct SettingsView: View {
                                    identifier: "settings-fork-upstream") {
                     NSWorkspace.shared.open(AppIdentity.upstreamRepository)
                 }
+            }
+        }
+    }
+
+    /// Attribution required by VRmin's GPL-3.0 Section 7 additional terms.
+    private var vrminAttribution: some View {
+        ObeliskRow(title: L10n.string("ui.vr.attribution.title")) {
+            SymbolTile(name: "visionpro", colors: TileColors.violet)
+        } detail: {
+            Text(L10n.string("ui.vr.attribution.detail"))
+        } accessory: {
+            GlassCapsuleButton(title: L10n.string("ui.vr.attribution.github"), systemImage: "arrow.up.right",
+                               identifier: "settings-vrmin-github") {
+                NSWorkspace.shared.open(VRModel.vrminRepository)
             }
         }
     }

@@ -6513,13 +6513,14 @@ public struct LaunchChoices: Equatable, Hashable {
     public var voiceProcessing: Bool
     public var performanceHud: Bool
     public var gameMode: Bool?
+    public var vrMode: LaunchVrMode?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(
         /**
          * What the player adds to the game's command line, as typed.
-         */arguments: String? = nil, engine: LaunchEngine? = nil, graphics: LaunchGraphics? = nil, rayTracing: Bool? = nil, renderPercent: UInt32? = nil, metalfxSpatial: Bool = false, metalfxFramegen: Bool = false, voiceProcessing: Bool = false, performanceHud: Bool = false, gameMode: Bool? = nil) {
+         */arguments: String? = nil, engine: LaunchEngine? = nil, graphics: LaunchGraphics? = nil, rayTracing: Bool? = nil, renderPercent: UInt32? = nil, metalfxSpatial: Bool = false, metalfxFramegen: Bool = false, voiceProcessing: Bool = false, performanceHud: Bool = false, gameMode: Bool? = nil, vrMode: LaunchVrMode? = nil) {
         self.arguments = arguments
         self.engine = engine
         self.graphics = graphics
@@ -6530,6 +6531,7 @@ public struct LaunchChoices: Equatable, Hashable {
         self.voiceProcessing = voiceProcessing
         self.performanceHud = performanceHud
         self.gameMode = gameMode
+        self.vrMode = vrMode
     }
 
     
@@ -6557,7 +6559,8 @@ public struct FfiConverterTypeLaunchChoices: FfiConverterRustBuffer {
                 metalfxFramegen: FfiConverterBool.read(from: &buf), 
                 voiceProcessing: FfiConverterBool.read(from: &buf), 
                 performanceHud: FfiConverterBool.read(from: &buf), 
-                gameMode: FfiConverterOptionBool.read(from: &buf)
+                gameMode: FfiConverterOptionBool.read(from: &buf), 
+                vrMode: FfiConverterOptionTypeLaunchVrMode.read(from: &buf)
         )
     }
 
@@ -6572,6 +6575,7 @@ public struct FfiConverterTypeLaunchChoices: FfiConverterRustBuffer {
         FfiConverterBool.write(value.voiceProcessing, into: &buf)
         FfiConverterBool.write(value.performanceHud, into: &buf)
         FfiConverterOptionBool.write(value.gameMode, into: &buf)
+        FfiConverterOptionTypeLaunchVrMode.write(value.vrMode, into: &buf)
     }
 }
 
@@ -6797,6 +6801,10 @@ public struct LaunchSettings: Equatable, Hashable {
      */
     public var gameMode: Bool
     /**
+     * Virtual reality runtime mode (Off, Auto, OpenXR, OpenVR/OpenComposite, SteamVR).
+     */
+    public var vrMode: LaunchVrMode
+    /**
      * What the player changed from what Obelisk knows of the game.
      */
     public var choices: LaunchChoices
@@ -6835,6 +6843,9 @@ public struct LaunchSettings: Equatable, Hashable {
          * macOS may turn its Game Mode on for the game.
          */gameMode: Bool, 
         /**
+         * Virtual reality runtime mode (Off, Auto, OpenXR, OpenVR/OpenComposite, SteamVR).
+         */vrMode: LaunchVrMode, 
+        /**
          * What the player changed from what Obelisk knows of the game.
          */choices: LaunchChoices, 
         /**
@@ -6853,6 +6864,7 @@ public struct LaunchSettings: Equatable, Hashable {
         self.voiceProcessing = voiceProcessing
         self.performanceHud = performanceHud
         self.gameMode = gameMode
+        self.vrMode = vrMode
         self.choices = choices
         self.defaultEngine = defaultEngine
         self.engines = engines
@@ -6883,6 +6895,7 @@ public struct FfiConverterTypeLaunchSettings: FfiConverterRustBuffer {
                 voiceProcessing: FfiConverterBool.read(from: &buf), 
                 performanceHud: FfiConverterBool.read(from: &buf), 
                 gameMode: FfiConverterBool.read(from: &buf), 
+                vrMode: FfiConverterTypeLaunchVrMode.read(from: &buf), 
                 choices: FfiConverterTypeLaunchChoices.read(from: &buf), 
                 defaultEngine: FfiConverterTypeLaunchEngine.read(from: &buf), 
                 engines: FfiConverterSequenceTypeLaunchEngineOffer.read(from: &buf)
@@ -6899,6 +6912,7 @@ public struct FfiConverterTypeLaunchSettings: FfiConverterRustBuffer {
         FfiConverterBool.write(value.voiceProcessing, into: &buf)
         FfiConverterBool.write(value.performanceHud, into: &buf)
         FfiConverterBool.write(value.gameMode, into: &buf)
+        FfiConverterTypeLaunchVrMode.write(value.vrMode, into: &buf)
         FfiConverterTypeLaunchChoices.write(value.choices, into: &buf)
         FfiConverterTypeLaunchEngine.write(value.defaultEngine, into: &buf)
         FfiConverterSequenceTypeLaunchEngineOffer.write(value.engines, into: &buf)
@@ -7041,6 +7055,18 @@ public struct ObeliskLocations: Equatable, Hashable {
      * One Wine prefix per Windows installation, named after its folder.
      */
     public var winePrefixes: String
+    /**
+     * Bundled VR Windows runtimes (OpenXR, OpenComposite, SteamVR driver_vrmin).
+     */
+    public var vrRuntime: String
+    /**
+     * Bundled macOS Metal VR streaming renderer helper.
+     */
+    public var vrRenderer: String
+    /**
+     * User-writable VR data directory.
+     */
+    public var vrData: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -7062,7 +7088,16 @@ public struct ObeliskLocations: Equatable, Hashable {
          */voile: String, 
         /**
          * One Wine prefix per Windows installation, named after its folder.
-         */winePrefixes: String) {
+         */winePrefixes: String, 
+        /**
+         * Bundled VR Windows runtimes (OpenXR, OpenComposite, SteamVR driver_vrmin).
+         */vrRuntime: String, 
+        /**
+         * Bundled macOS Metal VR streaming renderer helper.
+         */vrRenderer: String, 
+        /**
+         * User-writable VR data directory.
+         */vrData: String) {
         self.library = library
         self.home = home
         self.cloudArchive = cloudArchive
@@ -7075,6 +7110,9 @@ public struct ObeliskLocations: Equatable, Hashable {
         self.steamRuntimeCache = steamRuntimeCache
         self.voile = voile
         self.winePrefixes = winePrefixes
+        self.vrRuntime = vrRuntime
+        self.vrRenderer = vrRenderer
+        self.vrData = vrData
     }
 
     
@@ -7104,7 +7142,10 @@ public struct FfiConverterTypeObeliskLocations: FfiConverterRustBuffer {
                 steamRuntimePackage: FfiConverterString.read(from: &buf), 
                 steamRuntimeCache: FfiConverterString.read(from: &buf), 
                 voile: FfiConverterString.read(from: &buf), 
-                winePrefixes: FfiConverterString.read(from: &buf)
+                winePrefixes: FfiConverterString.read(from: &buf), 
+                vrRuntime: FfiConverterString.read(from: &buf), 
+                vrRenderer: FfiConverterString.read(from: &buf), 
+                vrData: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -7121,6 +7162,9 @@ public struct FfiConverterTypeObeliskLocations: FfiConverterRustBuffer {
         FfiConverterString.write(value.steamRuntimeCache, into: &buf)
         FfiConverterString.write(value.voile, into: &buf)
         FfiConverterString.write(value.winePrefixes, into: &buf)
+        FfiConverterString.write(value.vrRuntime, into: &buf)
+        FfiConverterString.write(value.vrRenderer, into: &buf)
+        FfiConverterString.write(value.vrData, into: &buf)
     }
 }
 
@@ -9423,6 +9467,146 @@ public func FfiConverterTypeVoileUpdateOffer_lower(_ value: VoileUpdateOffer) ->
 }
 
 
+public struct VrGameDetection: Equatable, Hashable {
+    public var isVr: Bool
+    public var hasOpenxr: Bool
+    public var hasOpenvr: Bool
+    public var hasOculus: Bool
+    public var hasVulkan: Bool
+    public var hasD3d12: Bool
+    public var engine: VrGameEngine
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(isVr: Bool, hasOpenxr: Bool, hasOpenvr: Bool, hasOculus: Bool, hasVulkan: Bool, hasD3d12: Bool, engine: VrGameEngine) {
+        self.isVr = isVr
+        self.hasOpenxr = hasOpenxr
+        self.hasOpenvr = hasOpenvr
+        self.hasOculus = hasOculus
+        self.hasVulkan = hasVulkan
+        self.hasD3d12 = hasD3d12
+        self.engine = engine
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension VrGameDetection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVrGameDetection: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VrGameDetection {
+        return
+            try VrGameDetection(
+                isVr: FfiConverterBool.read(from: &buf), 
+                hasOpenxr: FfiConverterBool.read(from: &buf), 
+                hasOpenvr: FfiConverterBool.read(from: &buf), 
+                hasOculus: FfiConverterBool.read(from: &buf), 
+                hasVulkan: FfiConverterBool.read(from: &buf), 
+                hasD3d12: FfiConverterBool.read(from: &buf), 
+                engine: FfiConverterTypeVrGameEngine.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: VrGameDetection, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.isVr, into: &buf)
+        FfiConverterBool.write(value.hasOpenxr, into: &buf)
+        FfiConverterBool.write(value.hasOpenvr, into: &buf)
+        FfiConverterBool.write(value.hasOculus, into: &buf)
+        FfiConverterBool.write(value.hasVulkan, into: &buf)
+        FfiConverterBool.write(value.hasD3d12, into: &buf)
+        FfiConverterTypeVrGameEngine.write(value.engine, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrGameDetection_lift(_ buf: RustBuffer) throws -> VrGameDetection {
+    return try FfiConverterTypeVrGameDetection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrGameDetection_lower(_ value: VrGameDetection) -> RustBuffer {
+    return FfiConverterTypeVrGameDetection.lower(value)
+}
+
+
+public struct VrRuntimeInfo: Equatable, Hashable {
+    public var rendererBundled: Bool
+    public var openxrBundled: Bool
+    public var opencompositeBundled: Bool
+    public var steamvrDriverBundled: Bool
+    public var steamvrPath: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(rendererBundled: Bool, openxrBundled: Bool, opencompositeBundled: Bool, steamvrDriverBundled: Bool, steamvrPath: String?) {
+        self.rendererBundled = rendererBundled
+        self.openxrBundled = openxrBundled
+        self.opencompositeBundled = opencompositeBundled
+        self.steamvrDriverBundled = steamvrDriverBundled
+        self.steamvrPath = steamvrPath
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension VrRuntimeInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVrRuntimeInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VrRuntimeInfo {
+        return
+            try VrRuntimeInfo(
+                rendererBundled: FfiConverterBool.read(from: &buf), 
+                openxrBundled: FfiConverterBool.read(from: &buf), 
+                opencompositeBundled: FfiConverterBool.read(from: &buf), 
+                steamvrDriverBundled: FfiConverterBool.read(from: &buf), 
+                steamvrPath: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: VrRuntimeInfo, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.rendererBundled, into: &buf)
+        FfiConverterBool.write(value.openxrBundled, into: &buf)
+        FfiConverterBool.write(value.opencompositeBundled, into: &buf)
+        FfiConverterBool.write(value.steamvrDriverBundled, into: &buf)
+        FfiConverterOptionString.write(value.steamvrPath, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrRuntimeInfo_lift(_ buf: RustBuffer) throws -> VrRuntimeInfo {
+    return try FfiConverterTypeVrRuntimeInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrRuntimeInfo_lower(_ value: VrRuntimeInfo) -> RustBuffer {
+    return FfiConverterTypeVrRuntimeInfo.lower(value)
+}
+
+
 /**
  * What the Keychain keeps of an account: who it is, the name its storefront
  * shows, and the refresh token its calls rotate.
@@ -11618,6 +11802,96 @@ public func FfiConverterTypeLaunchTranslator_lower(_ value: LaunchTranslator) ->
 
 
 /**
+ * How a Windows game connects to a VR headset via Obelisk's VR renderer.
+ */
+
+public enum LaunchVrMode: Equatable, Hashable {
+    
+    case off
+    case auto
+    case openXr
+    case openVr
+    case steamVr
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LaunchVrMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLaunchVrMode: FfiConverterRustBuffer {
+    typealias SwiftType = LaunchVrMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LaunchVrMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .off
+        
+        case 2: return .auto
+        
+        case 3: return .openXr
+        
+        case 4: return .openVr
+        
+        case 5: return .steamVr
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LaunchVrMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .off:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .auto:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .openXr:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .openVr:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .steamVr:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLaunchVrMode_lift(_ buf: RustBuffer) throws -> LaunchVrMode {
+    return try FfiConverterTypeLaunchVrMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLaunchVrMode_lower(_ value: LaunchVrMode) -> RustBuffer {
+    return FfiConverterTypeLaunchVrMode.lower(value)
+}
+
+
+
+/**
  * The status the player picks for a storefront account.
  */
 
@@ -13096,6 +13370,79 @@ public func FfiConverterTypeVoileUpdateAnswer_lower(_ value: VoileUpdateAnswer) 
 
 
 
+
+public enum VrGameEngine: Equatable, Hashable {
+    
+    case unknown
+    case unity
+    case unreal
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension VrGameEngine: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeVrGameEngine: FfiConverterRustBuffer {
+    typealias SwiftType = VrGameEngine
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VrGameEngine {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unknown
+        
+        case 2: return .unity
+        
+        case 3: return .unreal
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VrGameEngine, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unknown:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .unity:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unreal:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrGameEngine_lift(_ buf: RustBuffer) throws -> VrGameEngine {
+    return try FfiConverterTypeVrGameEngine.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeVrGameEngine_lower(_ value: VrGameEngine) -> RustBuffer {
+    return FfiConverterTypeVrGameEngine.lower(value)
+}
+
+
+
 /**
  * Why an account call failed. Swift shows each storefront's own text for
  * it; `Service` carries the storefront's localization key or message.
@@ -14039,6 +14386,30 @@ fileprivate struct FfiConverterOptionTypeLaunchGraphics: FfiConverterRustBuffer 
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeLaunchGraphics.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeLaunchVrMode: FfiConverterRustBuffer {
+    typealias SwiftType = LaunchVrMode?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeLaunchVrMode.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeLaunchVrMode.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -15431,6 +15802,29 @@ public func steamChatInvite(bbcode: String) -> SteamJoinTarget?  {
     )
 })
 }
+/**
+ * Scans an installed game folder for VR APIs (OpenXR, OpenVR, Oculus) and engine hints.
+ */
+public func detectGameVr(installPath: String) -> VrGameDetection  {
+    return try!  FfiConverterTypeVrGameDetection_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_obelisk_bridge_fn_func_detect_game_vr(
+        FfiConverterString.lower(installPath),uniffiCallStatus
+    )
+})
+}
+/**
+ * Inspects Obelisk's bundled VR payload and Valve's SteamVR installation.
+ */
+public func vrRuntimeInfo(locations: ObeliskLocations, customSteamvrPath: String?) -> VrRuntimeInfo  {
+    return try!  FfiConverterTypeVrRuntimeInfo_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_obelisk_bridge_fn_func_vr_runtime_info(
+        FfiConverterTypeObeliskLocations_lower(locations),
+        FfiConverterOptionString.lower(customSteamvrPath),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -15547,6 +15941,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_obelisk_bridge_checksum_func_steam_chat_invite() != 53466) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_obelisk_bridge_checksum_func_detect_game_vr() != 22177) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_obelisk_bridge_checksum_func_vr_runtime_info() != 39605) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_obelisk_bridge_checksum_method_credentialsave_save() != 31513) {

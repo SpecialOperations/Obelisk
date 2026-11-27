@@ -386,6 +386,7 @@ final class DeveloperModals {
                               voiceProcessing: offer.voiceProcessing && choices.voiceProcessing,
                               performanceHud: choices.performanceHud,
                               gameMode: !offer.gameMode || choices.gameMode ?? true,
+                              vrMode: choices.vrMode ?? .off,
                               choices: choices, defaultEngine: .rosetta, engines: engines)
     }
 

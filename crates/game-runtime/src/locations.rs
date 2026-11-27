@@ -25,6 +25,12 @@ pub struct Locations {
     pub voile: PathBuf,
     /// One Wine prefix per Windows installation, named after its folder.
     pub wine_prefixes: PathBuf,
+    /// Bundled VR Windows runtimes (OpenXR, OpenComposite, SteamVR driver_vrmin).
+    pub vr_runtime: PathBuf,
+    /// Bundled macOS Metal VR streaming renderer helper.
+    pub vr_renderer: PathBuf,
+    /// User-writable VR data directory (pairing, profiles, logs, launching banner).
+    pub vr_data: PathBuf,
 }
 
 impl Locations {
@@ -42,6 +48,9 @@ impl Locations {
             steam_runtime_cache,
             voile: library.join("Voile"),
             wine_prefixes: library.join("Prefixes"),
+            vr_runtime: bundle.join("Contents/Resources/VRRuntime"),
+            vr_renderer: bundle.join("Contents/Helpers/VR/ObeliskVRRenderer"),
+            vr_data: library.join("VR"),
             library: library.to_owned(),
             home: home.to_owned(),
         }

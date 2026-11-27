@@ -1104,6 +1104,16 @@ uint64_t uniffi_obelisk_bridge_fn_func_steam_news(uint32_t app_id
 RustBuffer uniffi_obelisk_bridge_fn_func_steam_chat_invite(RustBuffer bbcode, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_DETECT_GAME_VR
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_DETECT_GAME_VR
+RustBuffer uniffi_obelisk_bridge_fn_func_detect_game_vr(RustBuffer install_path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_VR_RUNTIME_INFO
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_FN_FUNC_VR_RUNTIME_INFO
+RustBuffer uniffi_obelisk_bridge_fn_func_vr_runtime_info(RustBuffer locations, RustBuffer custom_steamvr_path, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_FFI_OBELISK_BRIDGE_RUSTBUFFER_ALLOC
 #define UNIFFI_FFIDEF_FFI_OBELISK_BRIDGE_RUSTBUFFER_ALLOC
 RustBuffer ffi_obelisk_bridge_rustbuffer_alloc(uint64_t size, RustCallStatus *_Nonnull out_status
@@ -1565,6 +1575,18 @@ uint16_t uniffi_obelisk_bridge_checksum_func_steam_news(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_STEAM_CHAT_INVITE
 #define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_STEAM_CHAT_INVITE
 uint16_t uniffi_obelisk_bridge_checksum_func_steam_chat_invite(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_DETECT_GAME_VR
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_DETECT_GAME_VR
+uint16_t uniffi_obelisk_bridge_checksum_func_detect_game_vr(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_VR_RUNTIME_INFO
+#define UNIFFI_FFIDEF_UNIFFI_OBELISK_BRIDGE_CHECKSUM_FUNC_VR_RUNTIME_INFO
+uint16_t uniffi_obelisk_bridge_checksum_func_vr_runtime_info(void
     
 );
 #endif

@@ -29,6 +29,7 @@ pub mod steam;
 pub mod supervisor;
 pub mod valve;
 pub mod voile;
+pub mod vr;
 pub mod wine;
 pub use locations::Locations;
 use std::time::Duration;

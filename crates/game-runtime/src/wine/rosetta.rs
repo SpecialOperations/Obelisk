@@ -111,11 +111,16 @@ impl Adapter for RosettaWine {
         &self,
         config: &Config,
         locations: &crate::Locations,
+        install: &Path,
         storefront: &dyn Furnisher,
     ) -> Result<(), Error> {
         boot(config, &locations.home)?;
         storefront.furnish_prefix(config)?;
         install_prerequisites(config, &locations.home, &storefront.prerequisites_to_run()?)?;
+        if config.settings.vr_mode.is_enabled() {
+            let env = self::environment(config);
+            crate::vr::prepare_prefix(config, locations, install, &env)?;
+        }
         match config.log.parent() {
             Some(logs) => Ok(crate::files::private_directory(logs)?),
             None => Err(Error::Storage),

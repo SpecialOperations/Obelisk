@@ -25,6 +25,12 @@ pub struct ObeliskLocations {
     pub voile: String,
     /// One Wine prefix per Windows installation, named after its folder.
     pub wine_prefixes: String,
+    /// Bundled VR Windows runtimes (OpenXR, OpenComposite, SteamVR driver_vrmin).
+    pub vr_runtime: String,
+    /// Bundled macOS Metal VR streaming renderer helper.
+    pub vr_renderer: String,
+    /// User-writable VR data directory.
+    pub vr_data: String,
 }
 
 #[uniffi::export]
@@ -45,6 +51,9 @@ pub fn obelisk_locations(library: String, bundle: String, home: String) -> Obeli
         steam_runtime_cache: path(locations.steam_runtime_cache),
         voile: path(locations.voile),
         wine_prefixes: path(locations.wine_prefixes),
+        vr_runtime: path(locations.vr_runtime),
+        vr_renderer: path(locations.vr_renderer),
+        vr_data: path(locations.vr_data),
     }
 }
 
@@ -228,6 +237,9 @@ impl From<&ObeliskLocations> for game_runtime::Locations {
             steam_runtime_cache: (&locations.steam_runtime_cache).into(),
             voile: (&locations.voile).into(),
             wine_prefixes: (&locations.wine_prefixes).into(),
+            vr_runtime: (&locations.vr_runtime).into(),
+            vr_renderer: (&locations.vr_renderer).into(),
+            vr_data: (&locations.vr_data).into(),
         }
     }
 }

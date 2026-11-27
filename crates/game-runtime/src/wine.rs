@@ -219,6 +219,9 @@ impl Config {
         if !self.settings.game_mode {
             header.push_str(" game_mode=off");
         }
+        if self.settings.vr_mode.is_enabled() {
+            header.push_str(&format!(" vr={}", self.settings.vr_mode.name()));
+        }
         // Only a development runtime has no manifest.
         let voile = crate::voile::release_of(&self.runtime);
         header.push_str(&format!(
@@ -267,6 +270,7 @@ trait Adapter {
         &self,
         config: &Config,
         locations: &crate::Locations,
+        install: &Path,
         storefront: &dyn Furnisher,
     ) -> Result<(), Error>;
     /// How `program`, checked inside `game.install`, starts with
@@ -473,7 +477,7 @@ fn prepare<S: Storefront>(
     storefront: &S,
 ) -> Result<(), Error> {
     program(install, target)?;
-    config.adapter().ready(config, locations, storefront)
+    config.adapter().ready(config, locations, install, storefront)
 }
 
 /// The game `target` names, or the program its launch settings start
@@ -701,6 +705,7 @@ pub(crate) fn wait(mut child: Child, timeout: Duration) -> Result<Option<i32>, E
 /// Ends every process of the prefix: Wine asks them to quit, then kills
 /// those that remain, including the ones it started apart from the game.
 pub(crate) fn stop(config: &Config) {
+    crate::vr::stop_steamvr_gracefully(config);
     if let Some(mut command) = config.adapter().end_command(config) {
         let _ = command
             .stdin(Stdio::null())
@@ -729,6 +734,7 @@ pub(crate) fn quit(
 /// Kills every process of the prefix at once. Unlike `stop`, it never waits
 /// on a Wine server frozen with its game for longer than `QUIT_TIMEOUT`.
 pub(crate) fn kill(config: &Config) {
+    crate::vr::stop_steamvr_gracefully(config);
     if let Some(command) = config.adapter().end_command(config) {
         let _ = run(command, QUIT_TIMEOUT);
     }

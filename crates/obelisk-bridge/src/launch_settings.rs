@@ -5,6 +5,7 @@ use game_runtime::{
     launch_settings::{
         self, Choices, ENGINES, EngineOffer, GraphicsOffer, GraphicsOption, Translator, View,
     },
+    vr::VrMode,
     wine::{Engine, Graphics},
 };
 
@@ -28,6 +29,8 @@ pub struct LaunchSettings {
     pub performance_hud: bool,
     /// macOS may turn its Game Mode on for the game.
     pub game_mode: bool,
+    /// Virtual reality runtime mode (Off, Auto, OpenXR, OpenVR/OpenComposite, SteamVR).
+    pub vr_mode: LaunchVrMode,
     /// What the player changed from what Obelisk knows of the game.
     pub choices: LaunchChoices,
     /// The engine the game runs on without choices.
@@ -61,6 +64,19 @@ pub struct LaunchChoices {
     pub performance_hud: bool,
     #[uniffi(default = None)]
     pub game_mode: Option<bool>,
+    #[uniffi(default = None)]
+    pub vr_mode: Option<LaunchVrMode>,
+}
+
+/// How a Windows game connects to a VR headset via Obelisk's VR renderer.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, uniffi::Enum)]
+pub enum LaunchVrMode {
+    #[default]
+    Off,
+    Auto,
+    OpenXr,
+    OpenVr,
+    SteamVr,
 }
 
 /// What runs a Windows game's Wine.
@@ -133,6 +149,7 @@ impl From<View> for LaunchSettings {
             voice_processing: view.settings.voice_processing,
             performance_hud: view.settings.performance_hud,
             game_mode: view.settings.game_mode,
+            vr_mode: view.settings.vr_mode.into(),
             choices: view.choices.into(),
             default_engine: view.default_engine.into(),
             engines: ENGINES
@@ -186,6 +203,7 @@ impl From<Choices> for LaunchChoices {
             voice_processing: choices.voice_processing,
             performance_hud: choices.performance_hud,
             game_mode: choices.game_mode,
+            vr_mode: choices.vr_mode.map(Into::into),
         }
     }
 }
@@ -203,6 +221,31 @@ impl From<LaunchChoices> for launch_settings::Choices {
             voice_processing: choices.voice_processing,
             performance_hud: choices.performance_hud,
             game_mode: choices.game_mode,
+            vr_mode: choices.vr_mode.map(Into::into),
+        }
+    }
+}
+
+impl From<VrMode> for LaunchVrMode {
+    fn from(mode: VrMode) -> Self {
+        match mode {
+            VrMode::Off => Self::Off,
+            VrMode::Auto => Self::Auto,
+            VrMode::OpenXr => Self::OpenXr,
+            VrMode::OpenVr => Self::OpenVr,
+            VrMode::SteamVr => Self::SteamVr,
+        }
+    }
+}
+
+impl From<LaunchVrMode> for VrMode {
+    fn from(mode: LaunchVrMode) -> Self {
+        match mode {
+            LaunchVrMode::Off => Self::Off,
+            LaunchVrMode::Auto => Self::Auto,
+            LaunchVrMode::OpenXr => Self::OpenXr,
+            LaunchVrMode::OpenVr => Self::OpenVr,
+            LaunchVrMode::SteamVr => Self::SteamVr,
         }
     }
 }

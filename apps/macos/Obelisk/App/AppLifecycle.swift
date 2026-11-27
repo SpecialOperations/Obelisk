@@ -20,6 +20,8 @@ final class AppLifecycle: NSObject, NSApplicationDelegate {
     var libraryCache: LibraryCache?
     /// Obelisk's own updates, whose return to the latest release ends with it.
     var updates: AppUpdates?
+    /// Stops the bundled VR streaming renderer when Obelisk quits.
+    var stopVR: (@MainActor () -> Void)?
     /// Games are being stopped before Obelisk ends.
     private var stopping = false
     /// Obelisk is ending: its termination is let through.
@@ -70,6 +72,7 @@ final class AppLifecycle: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        stopVR?()
         libraryCache?.flush()
         updates?.finishReturn()
         if reopens { Self.reopenOnceExited() }
@@ -191,6 +194,7 @@ struct AppMenuBarLabel: View {
             .onAppear {
                 lifecycle.libraryCache = model.libraryCache
                 lifecycle.updates = model.updates
+                lifecycle.stopVR = { [weak app = model] in app?.vr.shutdown() }
                 model.overlay.showLibrary = { lifecycle.show() }
                 model.restart = { lifecycle.restart() }
                 model.updates.quitToInstall = { install in lifecycle.update(install) }

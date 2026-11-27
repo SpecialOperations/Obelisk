@@ -80,6 +80,8 @@ final class AppModel {
     /// Opt-in status and offload controls for Proton Experimental and Proton-GE.
     let protonExperimental: OptionalProtonModel
     let protonGe: OptionalProtonModel
+    /// Virtual reality streaming renderer and SteamVR / OpenXR host controller.
+    let vr: VRModel
     /// The ways to support Obelisk, which it shows by itself once.
     let support: SupportModel
 
@@ -152,6 +154,7 @@ final class AppModel {
             ?? OptionalProtonModel(kind: .experimental, locations: appLocations)
         self.protonGe = protonGe
             ?? OptionalProtonModel(kind: .ge, locations: appLocations)
+        self.vr = VRModel(locations: appLocations, defaults: defaults)
         self.support = support ?? SupportModel(defaults: defaults)
         self.downloads.progress = { [weak self] item in self?.downloadTransfer(item) }
         for section in LibrarySection.storefronts {
@@ -159,8 +162,13 @@ final class AppModel {
         }
         for account in accounts { adopt(account) }
         inviteNotifier?.answer = { [weak self] in self?.answerInviteNotice($0, $1) }
+        vr.onRequestLaunch = { [weak self] id in self?.launchVRGame(id: id) }
+        vr.onRequestQuit = { [weak self] in
+            Task { @MainActor [weak self] in await self?.stopGames() }
+        }
         reportPerformance()
         observeGameRunning()
+        observeVRLaunches()
         followFriends()
     }
 
@@ -230,7 +238,7 @@ final class AppModel {
         case .home: closeHomeGame()
         case .account(let slot): closeGame(of: slot)
         case .custom: closeCustomGame()
-        case .settings: break
+        case .vr, .settings: break
         }
     }
 
@@ -283,7 +291,7 @@ final class AppModel {
         case .steam: steam
         case .epic: epic
         case .gog: gog
-        case .home, .settings, .custom: nil
+        case .home, .settings, .custom, .vr: nil
         }
     }
 
@@ -521,6 +529,9 @@ final class AppModel {
         switch selection {
         case .home: for account in accounts { account.refresh() }
         case .custom, .settings: break
+        case .vr:
+            vr.refreshRuntimeInfo()
+            syncVRGames()
         case .account(let slot): account(slot)?.refresh()
         }
     }
@@ -546,6 +557,180 @@ final class AppModel {
         await steam.gameSessions.stop()
         await epic.gameSessions.stop()
         await gog.gameSessions.stop()
+    }
+
+    // MARK: Virtual Reality
+
+    /// Collects installed Windows games across Steam, Epic, GOG, and Custom so
+    /// the VR tab and the Quest headset's in-VR library stay in sync.
+    func syncVRGames() {
+        var entries: [(id: String, title: String, storefront: LibrarySection, directory: String)] = []
+        var seenDirs = Set<String>()
+
+        for account in steam.accounts {
+            for receipt in account.installations.receipts where receipt.platform == .windows {
+                guard seenDirs.insert(receipt.directory).inserted else { continue }
+                let title = account.gameName(appId: receipt.gameID)
+                    ?? URL(fileURLWithPath: receipt.directory).lastPathComponent
+                entries.append((id: "steam:\(receipt.gameID)", title: title, storefront: .steam, directory: receipt.directory))
+            }
+        }
+        for account in epic.accounts {
+            for receipt in account.installations.receipts where receipt.platform == .windows {
+                guard seenDirs.insert(receipt.directory).inserted else { continue }
+                let title = account.library.game(receipt.gameID)?.title
+                    ?? URL(fileURLWithPath: receipt.directory).lastPathComponent
+                entries.append((id: "epic:\(receipt.gameID)", title: title, storefront: .epic, directory: receipt.directory))
+            }
+        }
+        for account in gog.accounts {
+            for receipt in account.installations.receipts where receipt.platform == .windows {
+                guard seenDirs.insert(receipt.directory).inserted else { continue }
+                let title = account.library.game(receipt.gameID)?.title
+                    ?? URL(fileURLWithPath: receipt.directory).lastPathComponent
+                entries.append((id: "gog:\(receipt.gameID)", title: title, storefront: .gog, directory: receipt.directory))
+            }
+        }
+        for game in custom.games where !game.isApp {
+            let dir = URL(fileURLWithPath: game.executablePath).deletingLastPathComponent().path
+            guard seenDirs.insert(dir).inserted else { continue }
+            entries.append((id: "custom:\(game.id)", title: game.title, storefront: .custom, directory: dir))
+        }
+        vr.refreshGames(from: entries)
+    }
+
+    /// Opens the game page for a VR game item in its storefront tab.
+    func openVRGame(id: String) {
+        if let raw = id.stripPrefix("steam:"), let appId = UInt32(raw) {
+            for account in steam.accounts where account.installations.receipts.contains(where: { $0.gameID == appId }) {
+                if account.openGame(named: raw) {
+                    selection = account.tab
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("epic:") {
+            for account in epic.accounts where account.installations.receipts.contains(where: { $0.gameID == raw }) {
+                if account.openGame(named: raw) {
+                    selection = account.tab
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("gog:") {
+            for account in gog.accounts where account.installations.receipts.contains(where: { $0.gameID == raw }) {
+                if account.openGame(named: raw) {
+                    selection = account.tab
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("custom:"),
+                  let game = custom.games.first(where: { $0.id == raw }) {
+            custom.selectedGame = game
+            selection = .custom
+        }
+    }
+
+    /// Launches a game in VR from the VR tab or the Quest headset: starts
+    /// ObeliskVRRenderer if needed, enables Auto VR mode if the game was left
+    /// in flat mode, and starts the game through its storefront.
+    func launchVRGame(id: String) {
+        vr.ensureRunning()
+        if let raw = id.stripPrefix("steam:"), let appId = UInt32(raw) {
+            for account in steam.accounts {
+                if let receipt = account.installations.receipts.first(where: { $0.gameID == appId && $0.platform == .windows }) {
+                    Task {
+                        if let current = try? await account.installations.launchSettings(receipt),
+                           current.vrMode == .off {
+                            var choices = current.choices
+                            choices.vrMode = .auto
+                            _ = try? await account.installations.setLaunchSettings(receipt, choices: choices)
+                        }
+                        account.installations.launch(receipt)
+                    }
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("epic:") {
+            for account in epic.accounts {
+                if let receipt = account.installations.receipts.first(where: { $0.gameID == raw && $0.platform == .windows }) {
+                    Task {
+                        if let current = try? await account.installations.launchSettings(receipt),
+                           current.vrMode == .off {
+                            var choices = current.choices
+                            choices.vrMode = .auto
+                            _ = try? await account.installations.setLaunchSettings(receipt, choices: choices)
+                        }
+                        account.installations.launch(receipt)
+                    }
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("gog:") {
+            for account in gog.accounts {
+                if let receipt = account.installations.receipts.first(where: { $0.gameID == raw && $0.platform == .windows }) {
+                    Task {
+                        if let current = try? await account.installations.launchSettings(receipt),
+                           current.vrMode == .off {
+                            var choices = current.choices
+                            choices.vrMode = .auto
+                            _ = try? await account.installations.setLaunchSettings(receipt, choices: choices)
+                        }
+                        account.installations.launch(receipt)
+                    }
+                    return
+                }
+            }
+        } else if let raw = id.stripPrefix("custom:"),
+                  let game = custom.games.first(where: { $0.id == raw }) {
+            custom.launch(game)
+        }
+    }
+
+    /// Automatically starts ObeliskVRRenderer when any storefront begins
+    /// launching a Windows game whose saved Launch Settings enable VR.
+    private func observeVRLaunches() {
+        let launchingDirs: [String] = withObservationTracking {
+            var dirs: [String] = []
+            for account in steam.accounts where account.installations.isLaunching {
+                if let id = account.installations.launchGame,
+                   let r = account.installations.receipts.first(where: { $0.gameID == id && $0.platform == .windows }) {
+                    dirs.append(r.directory)
+                }
+            }
+            for account in epic.accounts where account.installations.isLaunching {
+                if let id = account.installations.launchGame,
+                   let r = account.installations.receipts.first(where: { $0.gameID == id && $0.platform == .windows }) {
+                    dirs.append(r.directory)
+                }
+            }
+            for account in gog.accounts where account.installations.isLaunching {
+                if let id = account.installations.launchGame,
+                   let r = account.installations.receipts.first(where: { $0.gameID == id && $0.platform == .windows }) {
+                    dirs.append(r.directory)
+                }
+            }
+            return dirs
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.observeVRLaunches() }
+        }
+
+        for dir in launchingDirs {
+            let folder = URL(fileURLWithPath: dir).lastPathComponent
+            let choicesFile = URL(fileURLWithPath: libraryDirectory)
+                .appendingPathComponent("LaunchSettings/\(folder).json")
+            if let data = try? Data(contentsOf: choicesFile),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let mode = obj["vr_mode"] as? String,
+               mode != "off" {
+                vr.ensureRunning()
+                break
+            }
+        }
+    }
+}
+
+private extension String {
+    func stripPrefix(_ prefix: String) -> String? {
+        hasPrefix(prefix) ? String(dropFirst(prefix.count)) : nil
     }
 }
 
