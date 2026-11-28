@@ -155,6 +155,8 @@ typedef struct {
     int handValid[2];
     XrPosef grip[2], aim[2];
     float in[2][IN_COUNT];
+    int hjValid[2];
+    XrPosef hj[2][XR_HAND_JOINT_COUNT_EXT];
     XrVector3f lin[3], ang[3];   /* velocidades en el mundo: 0 = mano izq, 1 = mano der, 2 = cabeza */
     double tms;                  /* tiempo del Quest (ms) */
     int64_t rx;                  /* cuándo llegó (reloj de este runtime, ns) */
@@ -258,6 +260,36 @@ static void parse_pose_line(const char *line) {
         }
         for (int i = 0; i < IN_COUNT; i++) t.in[h][i] = (float)v[k++];
     }
+    /* Optional 26-joint hand skeletons ("hj0" / "hj1") for XR_EXT_hand_tracking */
+    for (int h = 0; h < 2; h++) {
+        const char *hq = strstr(line, h ? "\"hj1\":[" : "\"hj0\":[");
+        if (!hq) continue;
+        hq += 7;
+        float vals[XR_HAND_JOINT_COUNT_EXT * 7];
+        int hn = 0;
+        while (hn < XR_HAND_JOINT_COUNT_EXT * 7 && *hq && *hq != ']') {
+            char *end;
+            double d = strtod(hq, &end);
+            if (end == hq) { hq++; continue; }
+            if (!isfinite(d) || fabs(d) > 1000.0) { hn = 0; break; }
+            vals[hn++] = (float)d;
+            hq = end;
+            while (*hq == ',' || *hq == ' ') hq++;
+        }
+        if (hn == XR_HAND_JOINT_COUNT_EXT * 7) {
+            for (int j = 0; j < XR_HAND_JOINT_COUNT_EXT; j++) {
+                const float *u = vals + j * 7;
+                t.hj[h][j].position.x = u[0]; t.hj[h][j].position.y = u[1]; t.hj[h][j].position.z = u[2];
+                float qx = u[3], qy = u[4], qz = u[5], qw = u[6];
+                float m = sqrtf(qx * qx + qy * qy + qz * qz + qw * qw);
+                if (m < 1e-4f) { qx = qy = qz = 0; qw = 1; }
+                else { qx /= m; qy /= m; qz /= m; qw /= m; }
+                t.hj[h][j].orientation.x = qx; t.hj[h][j].orientation.y = qy;
+                t.hj[h][j].orientation.z = qz; t.hj[h][j].orientation.w = qw;
+            }
+            t.hjValid[h] = 1;
+        }
+    }
     /* normalizar cuaterniones (por si llegan levemente desnormalizados) */
     XrQuaternionf *qs[6] = { &t.eye[0].orientation, &t.eye[1].orientation, &t.grip[0].orientation, &t.grip[1].orientation, &t.aim[0].orientation, &t.aim[1].orientation };
     for (int i = 0; i < 6; i++) {
@@ -288,7 +320,11 @@ static void parse_pose_line(const char *line) {
     }
     if (giro.orientation.w < 0.99999f || giro.position.x != 0 || giro.position.z != 0) {
         for (int e = 0; e < 2; e++) t.eye[e] = pmul(giro, t.eye[e]);
-        for (int h = 0; h < 2; h++) { t.grip[h] = pmul(giro, t.grip[h]); t.aim[h] = pmul(giro, t.aim[h]); }
+        for (int h = 0; h < 2; h++) {
+            t.grip[h] = pmul(giro, t.grip[h]);
+            t.aim[h] = pmul(giro, t.aim[h]);
+            if (t.hjValid[h]) for (int j = 0; j < XR_HAND_JOINT_COUNT_EXT; j++) t.hj[h][j] = pmul(giro, t.hj[h][j]);
+        }
     }
     EnterCriticalSection(&g_lock);
     {
@@ -1043,6 +1079,7 @@ static const char *g_extensions[] = {
     XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME,
     XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME,
 #endif
+    XR_EXT_HAND_TRACKING_EXTENSION_NAME,
 };
 #define N_EXT (sizeof g_extensions / sizeof g_extensions[0])
 
@@ -1169,7 +1206,8 @@ XRAPI_ATTR XrResult XRAPI_CALL rt_xrEnumerateInstanceExtensionProperties(const c
     if (cap < N_EXT) return XR_ERROR_SIZE_INSUFFICIENT;
     for (uint32_t i = 0; i < N_EXT; i++) {
         FILL_STR(props[i].extensionName, g_extensions[i]);
-        props[i].extensionVersion = 1;
+        props[i].extensionVersion = !strcmp(g_extensions[i], XR_EXT_HAND_TRACKING_EXTENSION_NAME)
+            ? XR_EXT_hand_tracking_SPEC_VERSION : 1;
     }
     return XR_SUCCESS;
 }
@@ -1287,6 +1325,11 @@ XRAPI_ATTR XrResult XRAPI_CALL rt_xrGetSystemProperties(XrInstance i, XrSystemId
     p->graphicsProperties.maxLayerCount = 16;
     p->trackingProperties.orientationTracking = XR_TRUE;
     p->trackingProperties.positionTracking = XR_TRUE;
+    for (XrBaseOutStructure *n = (XrBaseOutStructure *)p->next; n; n = n->next) {
+        if (n->type == XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT) {
+            ((XrSystemHandTrackingPropertiesEXT *)n)->supportsHandTracking = XR_TRUE;
+        }
+    }
     return XR_SUCCESS;
 }
 
@@ -4596,6 +4639,103 @@ XRAPI_ATTR XrResult XRAPI_CALL rt_xrConvertTimeToTimespecTimeKHR(XrInstance i, X
 }
 #endif
 
+/* --- Seguimiento de manos (XR_EXT_hand_tracking) --- */
+typedef struct {
+    Session *session;
+    XrHandEXT hand;
+} HandTracker;
+
+XRAPI_ATTR XrResult XRAPI_CALL rt_xrCreateHandTrackerEXT(
+    XrSession session, const XrHandTrackerCreateInfoEXT *info, XrHandTrackerEXT *handTracker) {
+    if (!session || !info || !handTracker) return XR_ERROR_VALIDATION_FAILURE;
+    if (info->hand != XR_HAND_LEFT_EXT && info->hand != XR_HAND_RIGHT_EXT) return XR_ERROR_VALIDATION_FAILURE;
+    HandTracker *ht = (HandTracker *)calloc(1, sizeof *ht);
+    if (!ht) return XR_ERROR_OUT_OF_MEMORY;
+    ht->session = (Session *)session;
+    ht->hand = info->hand;
+    *handTracker = (XrHandTrackerEXT)ht;
+    logmsg("XR_EXT_hand_tracking: tracker created (%s)", info->hand == XR_HAND_LEFT_EXT ? "left" : "right");
+    return XR_SUCCESS;
+}
+
+XRAPI_ATTR XrResult XRAPI_CALL rt_xrDestroyHandTrackerEXT(XrHandTrackerEXT handTracker) {
+    free((void *)handTracker);
+    return XR_SUCCESS;
+}
+
+XRAPI_ATTR XrResult XRAPI_CALL rt_xrLocateHandJointsEXT(
+    XrHandTrackerEXT handTracker, const XrHandJointsLocateInfoEXT *locateInfo, XrHandJointLocationsEXT *locations) {
+    if (!handTracker || !locateInfo || !locations) return XR_ERROR_VALIDATION_FAILURE;
+    if (!locations->jointLocations || locations->jointCount < XR_HAND_JOINT_COUNT_EXT)
+        return XR_ERROR_VALIDATION_FAILURE;
+    HandTracker *ht = (HandTracker *)handTracker;
+    int h = (ht->hand == XR_HAND_RIGHT_EXT) ? 1 : 0;
+
+    Track t;
+    EnterCriticalSection(&g_lock);
+    t = g_track;
+    LeaveCriticalSection(&g_lock);
+
+    if (!t.valid || !t.hjValid[h]) {
+        locations->isActive = XR_FALSE;
+        for (uint32_t j = 0; j < locations->jointCount; j++) {
+            locations->jointLocations[j].locationFlags = 0;
+            locations->jointLocations[j].pose = pident();
+            locations->jointLocations[j].radius = 0.0f;
+        }
+        return XR_SUCCESS;
+    }
+
+    int baseValid = 0;
+    XrPosef baseW = space_world((const Space *)locateInfo->baseSpace, &t, &baseValid);
+    if (!baseValid) {
+        locations->isActive = XR_FALSE;
+        for (uint32_t j = 0; j < locations->jointCount; j++) {
+            locations->jointLocations[j].locationFlags = 0;
+            locations->jointLocations[j].pose = pident();
+            locations->jointLocations[j].radius = 0.0f;
+        }
+        return XR_SUCCESS;
+    }
+
+    XrPosef invBase = pinv(baseW);
+    const XrSpaceLocationFlags fullFlags =
+        XR_SPACE_LOCATION_ORIENTATION_VALID_BIT | XR_SPACE_LOCATION_POSITION_VALID_BIT |
+        XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT | XR_SPACE_LOCATION_POSITION_TRACKED_BIT;
+    static const float kRadii[XR_HAND_JOINT_COUNT_EXT] = {
+        0.030f, 0.025f,
+        0.015f, 0.013f, 0.011f, 0.009f,
+        0.014f, 0.011f, 0.009f, 0.008f, 0.007f,
+        0.014f, 0.011f, 0.009f, 0.008f, 0.007f,
+        0.013f, 0.010f, 0.009f, 0.008f, 0.007f,
+        0.012f, 0.009f, 0.008f, 0.007f, 0.006f
+    };
+    locations->isActive = XR_TRUE;
+    for (uint32_t j = 0; j < XR_HAND_JOINT_COUNT_EXT; j++) {
+        locations->jointLocations[j].locationFlags = fullFlags;
+        locations->jointLocations[j].pose = pmul(invBase, t.hj[h][j]);
+        locations->jointLocations[j].radius = kRadii[j];
+    }
+    for (XrBaseOutStructure *n = (XrBaseOutStructure *)locations->next; n; n = n->next) {
+        if (n->type == XR_TYPE_HAND_JOINT_VELOCITIES_EXT) {
+            XrHandJointVelocitiesEXT *vel = (XrHandJointVelocitiesEXT *)n;
+            if (vel->jointVelocities) {
+                for (uint32_t j = 0; j < vel->jointCount; j++) {
+                    vel->jointVelocities[j].velocityFlags = 0;
+                    memset(&vel->jointVelocities[j].linearVelocity, 0, sizeof(XrVector3f));
+                    memset(&vel->jointVelocities[j].angularVelocity, 0, sizeof(XrVector3f));
+                }
+            }
+        }
+    }
+    static int logged[2] = { 0, 0 };
+    if (!logged[h]) {
+        logged[h] = 1;
+        logmsg("XR_EXT_hand_tracking: %s hand 26-joint skeleton active", h ? "right" : "left");
+    }
+    return XR_SUCCESS;
+}
+
 /* ------------------------------------------------------------------ */
 /* Tabla de funciones                                                  */
 /* ------------------------------------------------------------------ */
@@ -4629,6 +4769,7 @@ static const struct { const char *name; PFN_xrVoidFunction fn; } g_fns[] = {
     FN(xrGetActionStateBoolean), FN(xrGetActionStateFloat), FN(xrGetActionStateVector2f), FN(xrGetActionStatePose),
     FN(xrSyncActions), FN(xrEnumerateBoundSourcesForAction), FN(xrGetInputSourceLocalizedName),
     FN(xrApplyHapticFeedback), FN(xrStopHapticFeedback),
+    FN(xrCreateHandTrackerEXT), FN(xrDestroyHandTrackerEXT), FN(xrLocateHandJointsEXT),
 #ifdef _WIN32
     FN(xrInitializeLoaderKHR), FN(xrConvertWin32PerformanceCounterToTimeKHR), FN(xrConvertTimeToWin32PerformanceCounterKHR),
 #else
