@@ -137,6 +137,71 @@ struct GameBuildSwitch: View {
     }
 }
 
+/// Switches a VR-capable Windows game between launching in Desktop mode or VR
+/// mode right beside its Play button, reflecting at a glance whether clicking
+/// Play will launch in Desktop or VR right now.
+struct GameVRModeSwitch: View {
+    let willLaunchInVR: Bool
+    let isLocked: Bool
+    let desktopHelp: String
+    let vrHelp: String
+    let choose: (Bool) -> Void
+    @Namespace private var selection
+
+    var body: some View {
+        HStack(spacing: 2) {
+            segment(
+                isVR: false,
+                icon: "display",
+                title: L10n.string("ui.game.vr_switch.desktop"),
+                help: desktopHelp
+            )
+            segment(
+                isVR: true,
+                icon: "visionpro",
+                title: L10n.string("ui.game.vr_switch.vr"),
+                help: vrHelp
+            )
+        }
+        .padding(3)
+        .frame(height: 36)
+        .modifier(StorefrontControlGlass(interactive: false))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.string("ui.game.vr_switch.label"))
+        .accessibilityIdentifier("game-vr-mode-switch")
+    }
+
+    private func segment(isVR: Bool, icon: String, title: String, help: String) -> some View {
+        let isChosen = willLaunchInVR == isVR
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) { choose(isVR) }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .accessibilityHidden(true)
+                Text(title).font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(isChosen ? AnyShapeStyle(Color(nsColor: .windowBackgroundColor))
+                : AnyShapeStyle(.secondary))
+            .padding(.horizontal, 12)
+            .frame(maxHeight: .infinity)
+            .background {
+                if isChosen {
+                    Capsule().fill(Color(nsColor: .labelColor).opacity(0.92))
+                        .matchedGeometryEffect(id: "vr-mode-chosen", in: selection)
+                }
+            }
+            .contentShape(.capsule)
+        }
+        .obeliskButtonStyle(.plain)
+        .disabled(isLocked)
+        .opacity(isLocked && !isChosen ? 0.45 : 1)
+        .accessibilityAddTraits(isChosen ? .isSelected : [])
+        .help(help)
+    }
+}
+
 extension View {
     /// Asks before `removal` deletes `gameName`'s files.
     func removalConfirmation(_ removal: GameRemoval, _ gameName: String, isPresented: Binding<Bool>,

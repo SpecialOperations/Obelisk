@@ -686,7 +686,10 @@ final class AppModel {
     }
 
     /// Automatically starts ObeliskVRRenderer when any storefront begins
-    /// launching a Windows game whose saved Launch Settings enable VR.
+    /// launching a Windows game whose saved Launch Settings explicitly force a
+    /// VR runtime (`openxr`, `openvr`, or `steamvr`). Games set to `auto`
+    /// respect the current VR stream state so stopping the VR stream lets them
+    /// launch cleanly in Desktop mode.
     private func observeVRLaunches() {
         let launchingDirs: [String] = withObservationTracking {
             var dirs: [String] = []
@@ -720,7 +723,7 @@ final class AppModel {
             if let data = try? Data(contentsOf: choicesFile),
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let mode = obj["vr_mode"] as? String,
-               mode != "off" {
+               mode != "off" && mode != "auto" {
                 vr.ensureRunning()
                 break
             }

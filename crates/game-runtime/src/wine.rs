@@ -565,7 +565,12 @@ impl Installation {
         install: &Path,
         launch_settings: crate::launch_settings::View,
     ) -> Result<Self, Error> {
-        let settings = launch_settings.settings;
+        let mut settings = launch_settings.settings;
+        if settings.vr_mode == crate::vr::VrMode::Auto
+            && !crate::vr::is_renderer_active(&locations.vr_data)
+        {
+            settings.vr_mode = crate::vr::VrMode::Off;
+        }
         Ok(Self {
             install: install.to_owned(),
             prefix: settings.engine.prefix(&locations.wine_prefixes, install)?,

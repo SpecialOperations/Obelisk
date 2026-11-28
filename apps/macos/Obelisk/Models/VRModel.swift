@@ -22,10 +22,10 @@ enum VRQualityPreset: String, CaseIterable, Identifiable, Sendable {
 
     var parameters: (eye: Int, fps: Int, mbps: Int, foveation: VRFoveation)? {
         switch self {
-        case .low: (1024, 72, 45, .light)
-        case .medium: (1440, 90, 80, .light)
-        case .high: (1832, 90, 120, .off)
-        case .ultra: (2048, 120, 150, .off)
+        case .low: (1024, 72, 60, .off)
+        case .medium: (1440, 90, 100, .off)
+        case .high: (1832, 90, 150, .off)
+        case .ultra: (2048, 90, 200, .off)
         case .custom: nil
         }
     }
@@ -72,13 +72,28 @@ enum VRFoveation: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var envValue: String {
+    var level: Int {
         switch self {
-        case .off: "0"
-        case .light: "1,1,0.5,0.5,0.5"
-        case .medium: "2,1,0.5,0.5,0.5"
-        case .strong: "3,1,0.5,0.5,0.5"
+        case .off: 0
+        case .light: 1
+        case .medium: 2
+        case .strong: 3
         }
+    }
+
+    func envValue(centerSuffix: String?) -> String {
+        guard level > 0 else { return "0" }
+        let suffix = (centerSuffix?.isEmpty == false) ? centerSuffix! : "1,0.5,0.5,0.5"
+        return "\(level),\(suffix)"
+    }
+
+    static func centerSuffix(from envValue: String) -> String? {
+        let parts = envValue.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard parts.count >= 5 else { return nil }
+        let suffix = parts.dropFirst().prefix(4).joined(separator: ",")
+        // Ignore placeholder centered values so we never overwrite a real headset lens center.
+        guard suffix != "1,0.5,0.5,0.5" && suffix != "1,0.5000,0.5000,0.5000" else { return nil }
+        return suffix
     }
 
     static func from(envValue: String) -> VRFoveation {
@@ -88,6 +103,22 @@ enum VRFoveation: String, CaseIterable, Identifiable, Sendable {
         case 2: return .medium
         case 3...: return .strong
         default: return .off
+        }
+    }
+}
+
+enum VRFrameGenMode: Int, CaseIterable, Identifiable, Sendable {
+    case off = 0
+    case autoFill = 1
+    case spaceWarp = 2
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .off: L10n.string("ui.vr.framegen.off")
+        case .autoFill: L10n.string("ui.vr.framegen.auto_fill")
+        case .spaceWarp: L10n.string("ui.vr.framegen.spacewarp")
         }
     }
 }
@@ -112,6 +143,7 @@ private final class VRNetworkBridge: @unchecked Sendable {
     struct Handlers: Sendable {
         let onWakeRequest: @Sendable () -> Void
         let onSettingsUpdate: @Sendable (Int?, Int?, Int?, String?, String?, String?) -> Void
+        let onGameConfigUpdate: @Sendable (Int?) -> Void
         let onPlayGameWithQuality: @Sendable (String?, Int, Int, Int, String) -> Void
         let onLaunchGame: @Sendable (String) -> Void
         let onQuitGame: @Sendable () -> Void
@@ -288,6 +320,8 @@ private final class VRNetworkBridge: @unchecked Sendable {
                             obj["audio"] as? String,
                             obj["fov"] as? String
                         )
+                    case "gamecfg":
+                        self.handlers.onGameConfigUpdate(obj["scale"] as? Int)
                     case "playgame":
                         if let eye = obj["eye"] as? Int, let fps = obj["fps"] as? Int,
                            let mbps = obj["mbps"] as? Int, let fov = obj["fov"] as? String {
@@ -318,7 +352,7 @@ private final class VRNetworkBridge: @unchecked Sendable {
 @Observable
 final class VRModel {
     static let vrminRepository = URL(string: "https://github.com/thevermin/vrmin")!
-    static let eyeOptions = [1024, 1280, 1440, 1600, 1832, 2048]
+    static let eyeOptions = [1024, 1280, 1440, 1536, 1832, 2048, 2304, 2560]
     static let fpsOptions = [72, 80, 90, 120]
 
     private(set) var isRunning = false
@@ -328,6 +362,7 @@ final class VRModel {
     private(set) var statsLine = ""
     private(set) var audioOK = false
     private(set) var gameStreaming = false
+    private(set) var faceTrackingActive = false
     private(set) var lastError: String?
     private(set) var logs: [String] = []
     private(set) var runtimeInfo: VrRuntimeInfo
@@ -380,12 +415,49 @@ final class VRModel {
         }
     }
 
+    /// Global VR render scale percentage (50...100). Games render at `eye * renderScale / 100`
+    /// and ObeliskVRRenderer upscales back to `eye` using MetalFX Spatial.
+    var renderScale: Int {
+        didSet {
+            let clamped = min(100, max(50, renderScale))
+            if clamped != renderScale { renderScale = clamped; return }
+            defaults.set(clamped, forKey: Keys.renderScale)
+            persistGlobalRenderScale(clamped)
+        }
+    }
+
+    /// Effective per-eye resolution the game will render before MetalFX Spatial upscaling.
+    var scaledEyeResolution: Int {
+        max(256, Int((Double(eye) * Double(renderScale) / 100.0 / 8.0).rounded()) * 8)
+    }
+
     var audioRouting: VRAudioRouting {
         didSet { defaults.set(audioRouting.rawValue, forKey: Keys.audioRouting) }
     }
 
     var cableOnly: Bool {
         didSet { defaults.set(cableOnly, forKey: Keys.cableOnly) }
+    }
+
+    var showHeadsetHud: Bool {
+        didSet {
+            defaults.set(showHeadsetHud, forKey: Keys.showHeadsetHud)
+            persistHeadsetHudToggle(showHeadsetHud)
+        }
+    }
+
+    var faceTrackingOSC: Bool {
+        didSet {
+            defaults.set(faceTrackingOSC, forKey: Keys.faceTrackingOSC)
+            persistFaceTrackingToggle(faceTrackingOSC)
+        }
+    }
+
+    var frameGenMode: VRFrameGenMode {
+        didSet {
+            defaults.set(frameGenMode.rawValue, forKey: Keys.frameGenMode)
+            persistFrameGenMode(frameGenMode)
+        }
     }
 
     var useQuestMic: Bool {
@@ -418,6 +490,9 @@ final class VRModel {
     @ObservationIgnored private var pendingLaunchAfterRestart: String?
     @ObservationIgnored private var runningSignature = ""
     @ObservationIgnored private var applyingPreset = false
+    /// Preserves the Quest headset's exact canted optical lens center & foveation center size
+    /// (`"size,cxL,cxR,cy"`, e.g. `"2,0.6213,0.3787,0.3955"`) reported by the Quest APK.
+    @ObservationIgnored private var foveationCenterSuffix: String?
 
     private enum Keys {
         static let preset = "obelisk.vr.preset"
@@ -426,14 +501,21 @@ final class VRModel {
         static let mbps = "obelisk.vr.mbps"
         static let codec = "obelisk.vr.codec"
         static let foveation = "obelisk.vr.foveation"
+        static let foveationCenter = "obelisk.vr.foveationCenter"
+        static let renderScale = "obelisk.vr.renderScale"
         static let audioRouting = "obelisk.vr.audioRouting"
         static let cableOnly = "obelisk.vr.cableOnly"
+        static let showHeadsetHud = "obelisk.vr.showHeadsetHud"
+        static let hudToggleRev = "obelisk.vr.hudToggleRev"
+        static let faceTrackingOSC = "obelisk.vr.faceTrackingOSC"
+        static let frameGenMode = "obelisk.vr.frameGenMode"
+        static let frameGenRev = "obelisk.vr.frameGenRev"
         static let useQuestMic = "obelisk.vr.useQuestMic"
         static let steamVRPath = "obelisk.vr.steamVRPath"
     }
 
     private var currentSignature: String {
-        "\(eye)-\(fps)-\(mbps)-\(codec.rawValue)-\(foveation.rawValue)-\(audioRouting.rawValue)-\(cableOnly)-\(useQuestMic)"
+        "\(eye)-\(fps)-\(mbps)-\(codec.rawValue)-\(foveation.envValue(centerSuffix: foveationCenterSuffix))-\(audioRouting.rawValue)-\(cableOnly)-\(useQuestMic)"
     }
 
     var dataDirectory: URL { URL(fileURLWithPath: locations.vrData) }
@@ -452,8 +534,16 @@ final class VRModel {
         mbps = storedMbps > 0 ? storedMbps : defaultParams.mbps
         codec = VRCodec(rawValue: defaults.string(forKey: Keys.codec) ?? "") ?? .hevc
         foveation = VRFoveation(rawValue: defaults.string(forKey: Keys.foveation) ?? "") ?? defaultParams.foveation
+        foveationCenterSuffix = defaults.string(forKey: Keys.foveationCenter)
+        let storedScale = defaults.integer(forKey: Keys.renderScale)
+        let profileScale = Self.readGlobalRenderScale(in: URL(fileURLWithPath: locations.vrData))
+        let resolvedScale = profileScale ?? (storedScale >= 50 && storedScale <= 100 ? storedScale : 100)
+        renderScale = resolvedScale
         audioRouting = VRAudioRouting(rawValue: defaults.string(forKey: Keys.audioRouting) ?? "") ?? .quest
         cableOnly = defaults.bool(forKey: Keys.cableOnly)
+        showHeadsetHud = defaults.bool(forKey: Keys.showHeadsetHud)
+        faceTrackingOSC = defaults.object(forKey: Keys.faceTrackingOSC) as? Bool ?? true
+        frameGenMode = VRFrameGenMode(rawValue: defaults.integer(forKey: Keys.frameGenMode)) ?? .off
         useQuestMic = defaults.bool(forKey: Keys.useQuestMic)
         let savedSteamVRPath = defaults.string(forKey: Keys.steamVRPath) ?? ""
         customSteamVRPath = savedSteamVRPath
@@ -472,6 +562,7 @@ final class VRModel {
                 customSteamvrPath: savedSteamVRPath.isEmpty ? nil : savedSteamVRPath
             )
             persistSteamVRPath()
+            clearRendererPidFile()
             startNetworkBridge()
         }
     }
@@ -554,18 +645,22 @@ final class VRModel {
         env["VR_EYE"] = String(eye)
         env["VR_FPS"] = String(fps)
         env["VR_MBPS"] = String(mbps)
+        let fovEnv = foveation.envValue(centerSuffix: foveationCenterSuffix)
         env["VR_CODEC"] = codec.rawValue
-        env["VR_FOV"] = foveation.envValue
+        env["VR_FOV"] = fovEnv
         env["VR_GEN_EYE"] = String(eye)
         env["VR_GEN_FPS"] = String(fps)
         env["VR_GEN_MBPS"] = String(mbps)
-        env["VR_GEN_FOV"] = foveation.envValue
+        env["VR_GEN_FOV"] = fovEnv
         env["VR_AUDIO"] = audioRouting == .mac ? "0" : "1"
         env["VR_AUDIO_MAC"] = audioRouting == .quest ? "0" : "1"
         env["VR_CABLE_ONLY"] = cableOnly ? "1" : "0"
+        env["VR_FACE_TRACKING"] = faceTrackingOSC ? "1" : "0"
         env["VR_MIC"] = useQuestMic ? "quest" : ""
         env["VRMIN_LANG"] = L10n.languageCode == "es" ? "es" : "en"
         process.environment = env
+        persistFaceTrackingToggle(faceTrackingOSC)
+        if frameGenMode != .off { persistFrameGenMode(frameGenMode) }
 
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -589,8 +684,10 @@ final class VRModel {
                 guard let self else { return }
                 self.rendererProcess = nil
                 self.isRunning = false
+                self.clearRendererPidFile()
                 self.questConnected = false
                 self.gameStreaming = false
+                self.faceTrackingActive = false
                 self.statsLine = ""
                 self.audioOK = false
                 self.pairCode = nil
@@ -614,6 +711,7 @@ final class VRModel {
             try process.run()
             rendererProcess = process
             isRunning = true
+            writeRendererPidFile(process.processIdentifier)
             runningSignature = currentSignature
             networkBridge?.setServerRunning(true)
             appendLog("VR renderer started (\(eye)x\(eye) @ \(fps) Hz · \(mbps) Mbps · \(codec.rawValue.uppercased()))")
@@ -638,6 +736,7 @@ final class VRModel {
     }
 
     func stopServer(wait: Bool = false) {
+        clearRendererPidFile()
         guard let process = rendererProcess else { return }
         stopRequested = true
         process.terminate()
@@ -678,6 +777,19 @@ final class VRModel {
         customSteamVRPath = ""
     }
 
+    private func writeRendererPidFile(_ pid: Int32) {
+        guard !AppIdentity.isTestHost else { return }
+        try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+        let file = dataDirectory.appendingPathComponent("renderer.pid")
+        try? "\(pid)\n".write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    private func clearRendererPidFile() {
+        guard !AppIdentity.isTestHost else { return }
+        let file = dataDirectory.appendingPathComponent("renderer.pid")
+        try? FileManager.default.removeItem(at: file)
+    }
+
     private func persistSteamVRPath() {
         guard !AppIdentity.isTestHost else { return }
         let file = dataDirectory.appendingPathComponent("steamvr-path.txt")
@@ -687,6 +799,66 @@ final class VRModel {
             try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
             try? customSteamVRPath.write(to: file, atomically: true, encoding: .utf8)
         }
+    }
+
+    private static func readGlobalRenderScale(in dir: URL) -> Int? {
+        let file = dir.appendingPathComponent("perfiles_juegos.json")
+        guard let data = try? Data(contentsOf: file),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let global = root[""] as? [String: Any],
+              let scale = global["scale"] as? Double else { return nil }
+        let pct = Int((scale * 100.0).rounded())
+        return (50...100).contains(pct) ? pct : nil
+    }
+
+    private func persistGlobalRenderScale(_ percent: Int) {
+        guard !AppIdentity.isTestHost else { return }
+        try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+        let file = dataDirectory.appendingPathComponent("perfiles_juegos.json")
+        var root = ((try? Data(contentsOf: file))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }) ?? [:]
+        var global = (root[""] as? [String: Any]) ?? [:]
+        global["scale"] = Double(percent) / 100.0
+        root[""] = global
+        if let data = try? JSONSerialization.data(withJSONObject: root, options: [.sortedKeys]) {
+            try? data.write(to: file, options: .atomic)
+        }
+    }
+
+    private func persistHeadsetHudToggle(_ on: Bool) {
+        guard !AppIdentity.isTestHost else { return }
+        let rev = defaults.integer(forKey: Keys.hudToggleRev) + 1
+        defaults.set(rev, forKey: Keys.hudToggleRev)
+        try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+        let file = dataDirectory.appendingPathComponent("hud-toggle.txt")
+        try? "\(on ? 1 : 0)\t\(rev)\n".write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    private func persistFaceTrackingToggle(_ on: Bool) {
+        guard !AppIdentity.isTestHost else { return }
+        try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+        let file = dataDirectory.appendingPathComponent("ft-toggle.txt")
+        try? "\(on ? 1 : 0)\n".write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    private func persistFrameGenMode(_ mode: VRFrameGenMode) {
+        guard !AppIdentity.isTestHost else { return }
+        let rev = defaults.integer(forKey: Keys.frameGenRev) + 1
+        defaults.set(rev, forKey: Keys.frameGenRev)
+        try? FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true)
+        let file = dataDirectory.appendingPathComponent("framegen-toggle.txt")
+        try? "\(mode.rawValue)\t\(rev)\n".write(to: file, atomically: true, encoding: .utf8)
+    }
+
+    private func updateFoveation(from envValue: String, ignorePlaceholderWhenOff: Bool = false) {
+        if let suffix = VRFoveation.centerSuffix(from: envValue) {
+            foveationCenterSuffix = suffix
+            defaults.set(suffix, forKey: Keys.foveationCenter)
+        } else if ignorePlaceholderWhenOff && foveation == .off {
+            // Never let a stale placeholder per-game profile ("2,1,0.5,0.5,0.5") silently re-enable foveation.
+            return
+        }
+        foveation = VRFoveation.from(envValue: envValue)
     }
 
     private func startNetworkBridge() {
@@ -707,8 +879,16 @@ final class VRModel {
                     if let mbps, (10...300).contains(mbps) { self.mbps = mbps }
                     if let codec, let c = VRCodec(rawValue: codec) { self.codec = c }
                     if let audio, let a = VRAudioRouting(rawValue: audio) { self.audioRouting = a }
-                    if let fov { self.foveation = VRFoveation.from(envValue: fov) }
+                    if let fov { self.updateFoveation(from: fov) }
                     if self.isRunning { self.restartServer() }
+                }
+            },
+            onGameConfigUpdate: { [weak self] scale in
+                Task { @MainActor [weak self] in
+                    guard let self, let scale, (50...100).contains(scale) else { return }
+                    if self.renderScale != scale {
+                        self.renderScale = scale
+                    }
                 }
             },
             onPlayGameWithQuality: { [weak self] id, eye, fps, mbps, fov in
@@ -717,7 +897,7 @@ final class VRModel {
                     self.eye = eye
                     self.fps = fps
                     self.mbps = mbps
-                    self.foveation = VRFoveation.from(envValue: fov)
+                    self.updateFoveation(from: fov, ignorePlaceholderWhenOff: true)
                     self.pendingLaunchAfterRestart = id
                     self.restartServer()
                 }
@@ -766,6 +946,9 @@ final class VRModel {
         } else if line.contains("[-] Quest desconectado") || line.contains("[quest] App del Quest desconectada") {
             questConnected = false
             gameStreaming = false
+            faceTrackingActive = false
+        } else if line.contains("[vrcft] Quest Pro Eye & Face Tracking active") {
+            faceTrackingActive = true
         } else if line.contains("[juego] Primer cuadro recibido") {
             gameStreaming = true
         } else if line.hasPrefix("Quest ") && line.contains("poses/s") {

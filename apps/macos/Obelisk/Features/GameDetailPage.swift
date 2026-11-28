@@ -18,11 +18,16 @@ struct GameDetailPage<Model: LibraryStorefront, HeroArtwork: View, Cover: View, 
     /// The launch settings sheet of the installed Windows build, while open.
     @State private var launchSettings: LaunchSettingsModel?
     @State private var isCompact = false
+    /// Whether the installed Windows build supports VR (or has VR enabled) and its saved mode.
+    @State private var showsVRSwitch = false
+    @State private var savedVRMode: LaunchVrMode = .off
+    @State private var vrRefreshToken = 0
     @Environment(\.gameTransition) private var transition
     @Environment(\.storefrontBar) private var bar
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @Environment(PerformanceEstimates.self) private var estimates: PerformanceEstimates?
+    @Environment(AppModel.self) private var appModel: AppModel?
 
     /// The artwork's height below the bar it reaches under, as a library hero's.
     private static var heroHeight: CGFloat { ObeliskStyle.libraryHeroHeight }
@@ -96,7 +101,12 @@ struct GameDetailPage<Model: LibraryStorefront, HeroArtwork: View, Cover: View, 
         .sheet(isPresented: $achievements.isPresented) {
             GameAchievementsView(model: achievements, gameName: name, retry: model.reloadAchievements)
         }
-        .sheet(item: $launchSettings) { LaunchSettingsSheet(model: $0, gameName: name) }
+        .sheet(item: $launchSettings, onDismiss: { vrRefreshToken += 1 }) {
+            LaunchSettingsSheet(model: $0, gameName: name)
+        }
+        .task(id: "\(installations.selectedReceipt?.id ?? "")|\(installations.selectedReceipt?.directory ?? "")|\(vrRefreshToken)") {
+            await loadVRModeState()
+        }
     }
 
     private var hero: some View {
@@ -123,6 +133,18 @@ struct GameDetailPage<Model: LibraryStorefront, HeroArtwork: View, Cover: View, 
                     GamePageAction(installations: installations, gameName: name)
                     if let choice = installations.selectedBuildChoice {
                         GameBuildSwitch(choice: choice, choose: installations.chooseBuild)
+                    }
+                    if let receipt = installations.selectedReceipt,
+                       receipt.platform == .windows,
+                       showsVRSwitch || savedVRMode != .off {
+                        GameVRModeSwitch(
+                            willLaunchInVR: willLaunchInVR,
+                            isLocked: installations.selectedAction?.isAvailable != true,
+                            desktopHelp: desktopModeHelp,
+                            vrHelp: vrModeHelp
+                        ) { enableVR in
+                            applyVRSwitch(enableVR, for: receipt)
+                        }
                     }
                     if let id = Model.Store.storeGameID(game.id) {
                         GameReportButton(subject: .game(store: Model.Store.storefront, id: id, name: name),
@@ -240,6 +262,60 @@ struct GameDetailPage<Model: LibraryStorefront, HeroArtwork: View, Cover: View, 
         .padding(.top, 34)
         .padding(.bottom, 40)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var vrStreamRunning: Bool {
+        appModel?.vr.isRunning ?? false
+    }
+
+    private var willLaunchInVR: Bool {
+        savedVRMode != .off && (vrStreamRunning || savedVRMode != .auto)
+    }
+
+    private var desktopModeHelp: String {
+        if savedVRMode == .auto && !vrStreamRunning {
+            return L10n.string("ui.game.vr_switch.desktop_auto_stopped_help")
+        }
+        return L10n.string("ui.game.vr_switch.desktop_help")
+    }
+
+    private var vrModeHelp: String {
+        if willLaunchInVR {
+            return L10n.string("ui.game.vr_switch.vr_active_help")
+        }
+        return L10n.string("ui.game.vr_switch.vr_help")
+    }
+
+    private func loadVRModeState() async {
+        guard let receipt = installations.selectedReceipt, receipt.platform == .windows else {
+            showsVRSwitch = false
+            savedVRMode = .off
+            return
+        }
+        let directory = receipt.directory
+        let isVR = await Task.detached(priority: .utility) {
+            detectGameVr(installPath: directory).isVr
+        }.value
+        let settings = try? await installations.launchSettings(receipt)
+        guard !Task.isCancelled else { return }
+        showsVRSwitch = isVR
+        savedVRMode = settings?.vrMode ?? .off
+    }
+
+    private func applyVRSwitch(_ enableVR: Bool, for receipt: InstallationReceipt<Model.Store.GameID>) {
+        if enableVR {
+            appModel?.vr.ensureRunning()
+        }
+        let targetMode: LaunchVrMode = enableVR ? (savedVRMode == .off ? .auto : savedVRMode) : .off
+        savedVRMode = targetMode
+        Task {
+            guard let current = try? await installations.launchSettings(receipt) else { return }
+            var choices = current.choices
+            choices.vrMode = targetMode
+            if let updated = try? await installations.setLaunchSettings(receipt, choices: choices) {
+                savedVRMode = updated.vrMode
+            }
+        }
     }
 }
 

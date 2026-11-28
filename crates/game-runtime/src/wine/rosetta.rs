@@ -120,6 +120,8 @@ impl Adapter for RosettaWine {
         if config.settings.vr_mode.is_enabled() {
             let env = self::environment(config);
             crate::vr::prepare_prefix(config, locations, install, &env)?;
+        } else {
+            crate::vr::disable_in_prefix(config);
         }
         match config.log.parent() {
             Some(logs) => Ok(crate::files::private_directory(logs)?),

@@ -39460,6 +39460,377 @@
         }
       }
     },
+    "ui.game.vr_switch.desktop": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desktop"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desktop"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escritorio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bureau"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desktop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desktop"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌面"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.desktop_auto_stopped_help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der VR-Stream ist gestoppt — das Spiel startet im Desktop-Modus. Klicke auf VR, um den VR-Stream zu starten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR stream is stopped — launches in Desktop mode. Click VR to start the VR stream and launch in VR."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transmisión VR está detenida: se inicia en modo escritorio. Haz clic en VR para iniciar la transmisión y abrirlo en VR."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le flux VR est arrêté — lancement en mode Bureau. Cliquez sur VR pour démarrer le flux et lancer en VR."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo stream VR è fermo: si avvia in modalità Desktop. Fai clic su VR per avviare lo stream e giocare in VR."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR ストリームは停止中のためデスクトップモードで起動します。VR をクリックするとストリームを開始して VR で起動します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O stream VR está parado — inicia no modo Desktop. Clique em VR para iniciar o stream e abrir em VR."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR 串流已停止——将以桌面模式启动。点击 VR 可启动串流并以 VR 模式运行。"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.desktop_help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startet dieses Spiel im normalen Desktop-Modus ohne VR."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launches this game in standard Desktop mode without VR."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia este juego en modo escritorio normal sin VR."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lance ce jeu en mode Bureau standard sans VR."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia questo gioco in modalità Desktop standard senza VR."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR を使わず通常のデスクトップモードで起動します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia este jogo no modo Desktop padrão sem VR."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以标准桌面模式启动此游戏，不启用 VR。"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startmodus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch Mode"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo de inicio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode de lancement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modalità di avvio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動モード"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo de início"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动模式"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.vr": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.vr_active_help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Spiel startet im VR-Modus. Klicke auf Desktop, um es stattdessen auf dem Monitor zu spielen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This game will launch in VR mode. Click Desktop to play on your screen instead."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este juego se iniciará en modo VR. Haz clic en Escritorio para jugarlo en pantalla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce jeu se lancera en mode VR. Cliquez sur Bureau pour jouer sur votre écran."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo gioco si avvierà in modalità VR. Fai clic su Desktop per giocare sullo schermo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このゲームは VR モードで起動します。画面で遊ぶにはデスクトップをクリックしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este jogo será iniciado no modo VR. Clique em Desktop para jogar na tela."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此游戏将以 VR 模式启动。点击“桌面”可改为在屏幕上玩。"
+          }
+        }
+      }
+    },
+    "ui.game.vr_switch.vr_help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startet den VR-Stream und öffnet dieses Spiel im VR-Modus."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts the VR stream and launches this game in VR mode."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia la transmisión VR y abre este juego en modo VR."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarre le flux VR et lance ce jeu en mode VR."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia lo stream VR e apre questo gioco in modalità VR."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VR ストリームを開始し、このゲームを VR モードで起動します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia o stream VR e abre este jogo no modo VR."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动 VR 串流并以 VR 模式运行此游戏。"
+          }
+        }
+      }
+    },
     "ui.games_folder.format": {
       "extractionState": "manual",
       "localizations": {
@@ -44161,49 +44532,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erkennt OpenXR oder OpenVR automatisch und streamt Stereobilder über DXMT an dein Quest."
+            "value": "Startet automatisch in VR, wenn der VR-Stream läuft, und sauber im Desktop-Modus, wenn der VR-Stream gestoppt ist."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detects OpenXR or OpenVR automatically and streams stereo frames via DXMT to your Quest."
+            "value": "Launches in VR when the VR stream is running, and cleanly in Desktop mode when the VR stream is stopped."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detecta OpenXR u OpenVR automáticamente y transmite imágenes estéreo por DXMT a tu Quest."
+            "value": "Se inicia en VR cuando la transmisión VR está activa y en modo escritorio limpio cuando está detenida."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Détecte OpenXR ou OpenVR automatiquement et diffuse la stéréo via DXMT vers votre Quest."
+            "value": "Se lance en VR lorsque le flux VR est actif, et proprement en mode Bureau lorsqu’il est arrêté."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rileva automaticamente OpenXR o OpenVR e trasmette i fotogrammi stereo via DXMT al Quest."
+            "value": "Si avvia in VR quando lo stream VR è attivo, e in modalità Desktop pulita quando è fermo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "OpenXRまたはOpenVRを自動検出し、DXMT経由でQuestへステレオ映像を配信します。"
+            "value": "VR ストリーム実行中は VR で起動し、停止中はデスクトップモードでクリーンに起動します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detecta OpenXR ou OpenVR automaticamente e transmite quadros estéreo via DXMT para o Quest."
+            "value": "Inicia em VR quando o stream VR está ativo e no modo Desktop limpo quando está parado."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动检测 OpenXR 或 OpenVR，并通过 DXMT 向 Quest 串流立体画面。"
+            "value": "VR 串流运行时自动以 VR 启动，串流停止时以纯桌面模式启动。"
           }
         }
       }
@@ -58934,6 +59305,59 @@
         }
       }
     },
+    "ui.vr.format.percent": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %%"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %%"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %%"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        }
+      }
+    },
     "ui.vr.format.resolution": {
       "extractionState": "manual",
       "localizations": {
@@ -59195,6 +59619,165 @@
           "stringUnit": {
             "state": "translated",
             "value": "强"
+          }
+        }
+      }
+    },
+    "ui.vr.framegen.auto_fill": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-Auffüllen (fehlende Frames)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto Fill (Fill Dropped Frames)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relleno automático (cuadros perdidos)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplissage auto (images manquantes)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riempimento auto (fotogrammi persi)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動補間 (フレーム落ちを補完)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preenchimento automático (quadros perdidos)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动补帧 (填补丢帧)"
+          }
+        }
+      }
+    },
+    "ui.vr.framegen.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattivato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desativado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
+    "ui.vr.framegen.spacewarp": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Halbe Rate 2× (SpaceWarp)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Half-Rate 2× (SpaceWarp)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitad de cuadros 2× (SpaceWarp)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demi-fréquence 2× (SpaceWarp)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metà frequenza 2× (SpaceWarp)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハーフフレーム 2× (SpaceWarp)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meia taxa 2× (SpaceWarp)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "半帧率 2× (SpaceWarp)"
           }
         }
       }
@@ -60742,49 +61325,49 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Starte den Server oder öffne die VRmin-App auf dem Meta Quest — Obelisk bleibt per WLAN und USB-C auffindbar."
+            "value": "Starte den VR-Stream, um dein Meta Quest zu verbinden. Solange er gestoppt ist, starten Spiele im Modus „Automatisch“ auf dem Desktop."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start the server or open the VRmin app on your Meta Quest — Obelisk stays discoverable on Wi-Fi and USB-C."
+            "value": "Start the VR stream to connect your Meta Quest. While stopped, games set to Automatic VR launch in Desktop mode."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inicia el servidor o abre la app VRmin en tu Meta Quest; Obelisk sigue visible por Wi-Fi y USB-C."
+            "value": "Inicia la transmisión VR para conectar tu Meta Quest. Mientras está detenida, los juegos en VR automático se abren en escritorio."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Démarrez le serveur ou ouvrez l’app VRmin sur Meta Quest — Obelisk reste détectable en Wi-Fi et USB-C."
+            "value": "Démarrez le flux VR pour connecter votre Meta Quest. À l’arrêt, les jeux en VR automatique se lancent en mode Bureau."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avvia il server o apri l’app VRmin sul Meta Quest: Obelisk resta rilevabile via Wi-Fi e USB-C."
+            "value": "Avvia lo stream VR per connettere Meta Quest. Quando è fermo, i giochi in VR automatico si avviano in Desktop."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サーバーを開始するかMeta QuestでVRminアプリを開いてください（Wi-Fi・USB-Cで自動検出されます）。"
+            "value": "Meta Quest を接続するには VR ストリームを開始してください。停止中は自動 VR 設定のゲームもデスクトップで起動します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inicie o servidor ou abra o app VRmin no Meta Quest — o Obelisk continua visível por Wi-Fi e USB-C."
+            "value": "Inicie o stream VR para conectar seu Meta Quest. Enquanto parado, jogos em VR automático abrem no modo Desktop."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启动服务或在 Meta Quest 上打开 VRmin 应用——Obelisk 通过 Wi-Fi 和 USB-C 保持可发现状态。"
+            "value": "启动 VR 串流以连接 Meta Quest。停止期间，设为自动 VR 的游戏将以桌面模式启动。"
           }
         }
       }
@@ -61531,6 +62114,165 @@
         }
       }
     },
+    "ui.vr.streaming.face_tracking": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Augen- & Gesichtstracking (VRCFaceTracking)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eye & Face Tracking (VRCFaceTracking)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguimiento ocular y facial (VRCFaceTracking)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivi oculaire et facial (VRCFaceTracking)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracciamento occhi e viso (VRCFaceTracking)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイ＆フェイストラッキング (VRCFaceTracking)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rastreamento ocular e facial (VRCFaceTracking)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "眼动与面部追踪 (VRCFaceTracking)"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.face_tracking_active": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv — Quest Pro Augen- & Gesichtstracking sendet live an VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active — Quest Pro eye & face tracking is streaming live to VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activo — El seguimiento ocular y facial del Quest Pro se envía en vivo a VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actif — Le suivi oculaire et facial du Quest Pro est diffusé en direct vers VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivo — Il tracciamento occhi e viso di Quest Pro è in streaming su VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稼働中 — Quest Proのアイ＆フェイストラッキングをVRChat OSC (127.0.0.1:9000) へライブ送信中。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativo — O rastreamento ocular e facial do Quest Pro está enviando ao vivo para o VRChat OSC (127.0.0.1:9000)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已激活 — Quest Pro 眼动与面部追踪正在实时发送到 VRChat OSC (127.0.0.1:9000)。"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.face_tracking_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streamt Quest Pro Augen- und 70-Ausdrücke-Gesichtstracking über OSC (127.0.0.1:9000) an VRChat (nativ + Unified Expressions v2)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Streams Quest Pro eye gaze and 70-expression face tracking to VRChat over OSC (127.0.0.1:9000) — native eye tracking + VRCFT v2."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía la mirada y 70 expresiones faciales del Quest Pro a VRChat por OSC (127.0.0.1:9000): ojos nativos + VRCFT v2."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diffuse le suivi oculaire et facial (70 expressions) du Quest Pro vers VRChat via OSC (127.0.0.1:9000) — natif + VRCFT v2."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invia sguardo e 70 espressioni facciali di Quest Pro a VRChat via OSC (127.0.0.1:9000) — nativo + VRCFT v2."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest Proのアイトラッキングと70種の表情をOSC (127.0.0.1:9000) でVRChatへ送信（ネイティブ + VRCFT v2対応）。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envia rastreamento ocular e 70 expressões faciais do Quest Pro ao VRChat via OSC (127.0.0.1:9000) — nativo + VRCFT v2."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 OSC (127.0.0.1:9000) 将 Quest Pro 眼动和 70 种面部表情发送到 VRChat（原生眼动 + VRCFT v2）。"
+          }
+        }
+      }
+    },
     "ui.vr.streaming.foveation": {
       "extractionState": "manual",
       "localizations": {
@@ -61743,6 +62485,218 @@
         }
       }
     },
+    "ui.vr.streaming.framegen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest-Frame-Generierung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest Frame Generation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generación de cuadros en Quest"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Génération d'images Quest"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generazione fotogrammi Quest"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest フレーム生成"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geração de quadros no Quest"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest 帧生成"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.framegen_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erzeugt Zwischenbilder direkt auf dem Quest (SpaceWarp) für flüssigere 90 Hz bei halber Mac-Framerate."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synthesizes intermediate frames on the Quest (Auto Fill or SpaceWarp 45→90 Hz) so demanding games like VRChat stay fluid."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera cuadros intermedios en el Quest (relleno automático o SpaceWarp 45→90 Hz) para mantener fluidos juegos exigentes como VRChat."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Génère des images intermédiaires sur le Quest (Remplissage auto ou SpaceWarp 45→90 Hz) pour fluidifier les jeux exigeants comme VRChat."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera fotogrammi intermedi sul Quest (Riempimento auto o SpaceWarp 45→90 Hz) per rendere fluidi giochi impegnativi come VRChat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest側で中間フレームを生成（自動補間またはSpaceWarp 45→90 Hz）し、VRChatなどの重いゲームを滑らかに保ちます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gera quadros intermediários no Quest (Preenchimento automático ou SpaceWarp 45→90 Hz) para manter jogos pesados como VRChat fluidos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Quest 端合成中间帧（自动补帧或 SpaceWarp 45→90 Hz），让 VRChat 等高负载游戏更流畅。"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.headset_hud": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leistungs-HUD im Headset"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performance HUD in Headset"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indicador de rendimiento en el visor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ATH de performances dans le casque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD prestazioni nel visore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘッドセット内パフォーマンス HUD"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HUD de desempenho no visor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "头显内性能 HUD"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.headset_hud_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt FPS, Bitrate, Latenz und Mac-Frame-Zeiten oben links in deinem Quest an (benötigt Obelisk VR APK)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows FPS, bitrate, latency, and Mac frame timing in the top-left of your Quest view (requires Obelisk VR APK)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra FPS, tasa de bits, demora y tiempos de la Mac arriba a la izquierda en tu Quest (requiere el APK Obelisk VR)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche les IPS, le débit, la latence et les temps d’image du Mac en haut à gauche dans votre Quest (nécessite l’APK Obelisk VR)."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra FPS, bitrate, latenza e tempi dei fotogrammi del Mac in alto a sinistra sul Quest (richiede l’APK Obelisk VR)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quest の左上に FPS、ビットレート、遅延、Mac のフレーム時間を表示します（Obelisk VR APK が必要）。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra FPS, taxa de bits, latência e tempos de quadro do Mac no canto superior esquerdo do Quest (requer o APK Obelisk VR)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Quest 视野左上角显示帧率、码率、延迟和 Mac 帧耗时（需要 Obelisk VR APK）。"
+          }
+        }
+      }
+    },
     "ui.vr.streaming.preset": {
       "extractionState": "manual",
       "localizations": {
@@ -61845,6 +62799,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "平衡单眼分辨率、刷新率、码率与注视点编码。"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.render_scale": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Render-Skalierung (MetalFX)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Render Scale (MetalFX)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escala de renderizado (MetalFX)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échelle de rendu (MetalFX)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scala di rendering (MetalFX)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レンダースケール（MetalFX）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escala de renderização (MetalFX)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "渲染缩放（MetalFX）"
+          }
+        }
+      }
+    },
+    "ui.vr.streaming.render_scale_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spiele rendern mit %lld %% Auflösung (%lld×%lld pro Auge) und MetalFX Spatial skaliert auf %lld×%lld hoch. Wird beim nächsten Spielstart aktiv."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Games render at %lld%% resolution (%lld×%lld per eye) and MetalFX Spatial upscales to %lld×%lld. Applied on next game launch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los juegos dibujan al %lld %% de resolución (%lld×%lld por ojo) y MetalFX Spatial lo escala a %lld×%lld. Se aplica al abrir el próximo juego."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les jeux s’affichent à %lld %% de résolution (%lld×%lld par œil) et MetalFX Spatial met à l’échelle vers %lld×%lld. Appliqué au prochain lancement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I giochi renderizzano al %lld%% di risoluzione (%lld×%lld per occhio) e MetalFX Spatial esegue l’upscaling a %lld×%lld. Applicato al prossimo avvio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゲームを %lld%% の解像度（片目 %lld×%lld）で描画し、MetalFX Spatial で %lld×%lld にアップスケールします。次回起動時に適用されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os jogos renderizam em %lld%% da resolução (%lld×%lld por olho) e o MetalFX Spatial amplia para %lld×%lld. Aplicado no próximo início do jogo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "游戏以 %lld%% 分辨率（单眼 %lld×%lld）渲染，并由 MetalFX Spatial 放大至 %lld×%lld。下次启动游戏时生效。"
           }
         }
       }

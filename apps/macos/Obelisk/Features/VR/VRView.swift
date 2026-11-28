@@ -295,6 +295,34 @@ struct VRView: View {
 
                 ObeliskCardDivider()
 
+                ObeliskRow(title: L10n.string("ui.vr.streaming.render_scale")) {
+                    SymbolTile(name: "arrow.up.left.and.arrow.down.right", colors: TileColors.violet)
+                } detail: {
+                    Text(L10n.string(
+                        "ui.vr.streaming.render_scale_detail",
+                        vr.renderScale,
+                        vr.scaledEyeResolution,
+                        vr.scaledEyeResolution,
+                        vr.eye,
+                        vr.eye
+                    ))
+                } accessory: {
+                    HStack(spacing: 10) {
+                        Slider(
+                            value: Binding(get: { Double(vr.renderScale) }, set: { vr.renderScale = Int($0.rounded()) }),
+                            in: 50...100,
+                            step: 5
+                        )
+                        .frame(width: 150)
+                        Text(L10n.string("ui.vr.format.percent", vr.renderScale))
+                            .font(.system(size: 12, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 48, alignment: .trailing)
+                    }
+                }
+
+                ObeliskCardDivider()
+
                 ObeliskRow(title: L10n.string("ui.vr.streaming.fps")) {
                     SymbolTile(name: "gauge.with.needle.fill", colors: TileColors.green)
                 } detail: {
@@ -385,6 +413,55 @@ struct VRView: View {
                         identifier: "vr-audio"
                     ) {
                         ForEach(VRAudioRouting.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                }
+
+                ObeliskCardDivider()
+
+                ObeliskRow(title: L10n.string("ui.vr.streaming.headset_hud")) {
+                    SymbolTile(name: "chart.bar.xaxis", colors: TileColors.blue)
+                } detail: {
+                    Text(L10n.string("ui.vr.streaming.headset_hud_detail"))
+                } accessory: {
+                    Toggle(L10n.string("ui.vr.streaming.headset_hud"),
+                           isOn: Binding(get: { vr.showHeadsetHud }, set: { vr.showHeadsetHud = $0 }))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .pointerCursor()
+                }
+
+                ObeliskCardDivider()
+
+                ObeliskRow(title: L10n.string("ui.vr.streaming.face_tracking")) {
+                    SymbolTile(name: "face.smiling", colors: vr.faceTrackingActive ? TileColors.green : TileColors.violet)
+                } detail: {
+                    Text(vr.faceTrackingActive
+                         ? L10n.string("ui.vr.streaming.face_tracking_active")
+                         : L10n.string("ui.vr.streaming.face_tracking_detail"))
+                } accessory: {
+                    Toggle(L10n.string("ui.vr.streaming.face_tracking"),
+                           isOn: Binding(get: { vr.faceTrackingOSC }, set: { vr.faceTrackingOSC = $0 }))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                        .pointerCursor()
+                }
+
+                ObeliskCardDivider()
+
+                ObeliskRow(title: L10n.string("ui.vr.streaming.framegen")) {
+                    SymbolTile(name: "bolt.horizontal.fill", colors: TileColors.gold)
+                } detail: {
+                    Text(L10n.string("ui.vr.streaming.framegen_detail"))
+                } accessory: {
+                    GlassMenuPicker(
+                        title: L10n.string("ui.vr.streaming.framegen"),
+                        value: vr.frameGenMode.title,
+                        selection: Binding(get: { vr.frameGenMode }, set: { vr.frameGenMode = $0 }),
+                        identifier: "vr-framegen"
+                    ) {
+                        ForEach(VRFrameGenMode.allCases) { mode in
                             Text(mode.title).tag(mode)
                         }
                     }

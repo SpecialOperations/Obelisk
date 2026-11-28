@@ -552,6 +552,78 @@ fn upsert_reg_section(text: &str, section_prefix: &str, value_line: &str, now: u
     out
 }
 
+/// Returns `true` when `ObeliskVRRenderer` is currently running, verified by
+/// reading `<vr_data>/renderer.pid` and checking that the process is still alive.
+pub(crate) fn is_renderer_active(vr_data: &Path) -> bool {
+    let Ok(text) = fs::read_to_string(vr_data.join("renderer.pid")) else {
+        return false;
+    };
+    let Ok(pid) = text.trim().parse::<u32>() else {
+        return false;
+    };
+    pid_is_alive(pid)
+}
+
+fn pid_is_alive(pid: u32) -> bool {
+    if pid == 0 {
+        return false;
+    }
+    Command::new("/bin/kill")
+        .args(["-0", &pid.to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
+/// Removes Obelisk's VR runtime hooks (`openvrpaths.vrpath`, OpenXR
+/// `ActiveRuntime` entries pointing to `questvrbridge`, and `.obelisk_vr_mode`)
+/// from a Wine prefix so launching in Desktop mode never triggers VR init.
+pub(crate) fn disable_in_prefix(config: &wine::Config) {
+    let vrpath = wine::profile(&config.prefix).join("AppData/Local/openvr/openvrpaths.vrpath");
+    if let Ok(text) = fs::read_to_string(&vrpath)
+        && text.to_ascii_lowercase().contains("questvrbridge")
+    {
+        let _ = fs::remove_file(&vrpath);
+    }
+
+    let system_reg = config.prefix.join("system.reg");
+    if system_reg.is_file() {
+        let _ = remove_openxr_system_reg(&system_reg);
+    }
+
+    let mode_marker = config.prefix.join("drive_c/questvrbridge/.obelisk_vr_mode");
+    let _ = fs::remove_file(&mode_marker);
+}
+
+fn remove_openxr_system_reg(system_reg: &Path) -> std::io::Result<()> {
+    let text = fs::read_to_string(system_reg)?;
+    let mut changed = false;
+    let mut in_openxr = false;
+    let mut kept: Vec<&str> = Vec::new();
+    for line in text.lines() {
+        if line.starts_with('[') {
+            let lower = line.to_ascii_lowercase();
+            in_openxr = lower.starts_with(r"[software\\khronos\\openxr\\1]")
+                || lower.starts_with(r"[software\\wow6432node\\khronos\\openxr\\1]");
+        } else if in_openxr {
+            let lower = line.to_ascii_lowercase();
+            if lower.starts_with("\"activeruntime\"=") && lower.contains("questvrbridge") {
+                changed = true;
+                continue;
+            }
+        }
+        kept.push(line);
+    }
+    if changed {
+        let mut out = kept.join("\n");
+        out.push('\n');
+        obelisk_core::write_atomic(system_reg, out.as_bytes())?;
+    }
+    Ok(())
+}
+
 /// Gracefully asks SteamVR's `vrmonitor.exe` to close before `wineserver -k`
 /// terminates the prefix, avoiding SteamVR Safe Mode on the next launch.
 pub(crate) fn stop_steamvr_gracefully(config: &wine::Config) {
@@ -870,6 +942,7 @@ fn write_launching_banner(vr_data: &Path, install: &Path, runtime: ResolvedVrRun
     if let Ok(mut file) = fs::File::create(vr_data.join("lanzando.txt")) {
         let _ = file.write_all(line.as_bytes());
     }
+    let _ = fs::write(vr_data.join("active-game.txt"), folder.as_bytes());
 }
 
 #[cfg(test)]
@@ -947,5 +1020,36 @@ mod tests {
         assert_eq!(settings["steamvr"]["forcedDriver"], "vrmin");
         assert_eq!(settings["driver_vrmin"]["enable"], true);
         assert_eq!(settings["driver_vrmin"]["blocked_by_safe_mode"], false);
+    }
+
+    #[test]
+    fn renderer_active_checks_live_pid_and_disable_cleans_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!is_renderer_active(dir.path()));
+
+        fs::write(dir.path().join("renderer.pid"), "99999999\n").unwrap();
+        assert!(!is_renderer_active(dir.path()));
+
+        fs::write(
+            dir.path().join("renderer.pid"),
+            format!("{}\n", std::process::id()),
+        )
+        .unwrap();
+        assert!(is_renderer_active(dir.path()));
+
+        let system_reg = dir.path().join("system.reg");
+        fs::write(&system_reg, "WINE REGISTRY Version 2\n").unwrap();
+        upsert_openxr_system_reg(
+            &system_reg,
+            r"C:\questvrbridge\questvrbridge_openxr.json",
+            r"C:\questvrbridge\questvrbridge_openxr32.json",
+        )
+        .unwrap();
+        let after_add = fs::read_to_string(&system_reg).unwrap();
+        assert!(after_add.contains("questvrbridge_openxr.json"));
+
+        remove_openxr_system_reg(&system_reg).unwrap();
+        let after_remove = fs::read_to_string(&system_reg).unwrap();
+        assert!(!after_remove.contains("questvrbridge_openxr.json"));
     }
 }

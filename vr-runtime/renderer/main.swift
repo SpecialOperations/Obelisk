@@ -154,7 +154,23 @@ final class Foveator {
             constexpr sampler smp(filter::linear, mip_filter::linear, address::clamp_to_edge);
             float hx = 0.5 / p.z;
             float u = (float(eye) + clamp(sx, hx, 1.0 - hx)) * 0.5;
-            return src.sample(smp, float2(u, sy), level(lod));
+            float2 uv = float2(u, sy);
+            float4 c = src.sample(smp, uv, level(lod));
+            if (lod < 0.05) {
+                float2 px = float2(1.0 / (p.z * 2.0), 1.0 / p.w);
+                float minU = float(eye) * 0.5 + 0.5 * px.x;
+                float maxU = float(eye + 1u) * 0.5 - 0.5 * px.x;
+                float3 n = src.sample(smp, float2(uv.x, clamp(uv.y - px.y, 0.0, 1.0)), level(0.0)).rgb;
+                float3 s = src.sample(smp, float2(uv.x, clamp(uv.y + px.y, 0.0, 1.0)), level(0.0)).rgb;
+                float3 w = src.sample(smp, float2(clamp(uv.x - px.x, minU, maxU), uv.y), level(0.0)).rgb;
+                float3 e = src.sample(smp, float2(clamp(uv.x + px.x, minU, maxU), uv.y), level(0.0)).rgb;
+                float3 mn = min(c.rgb, min(min(n, s), min(w, e)));
+                float3 mx = max(c.rgb, max(max(n, s), max(w, e)));
+                float3 amp = clamp(min(mn, 1.0 - mx) / max(mx, float3(1e-5)), 0.0, 1.0);
+                float3 wgt = sqrt(amp) * (-0.14);
+                c.rgb = clamp((c.rgb + (n + s + w + e) * wgt) / (1.0 + 4.0 * wgt), 0.0, 1.0);
+            }
+            return c;
         }
         """
         do {
@@ -205,7 +221,7 @@ final class Foveator {
     }
     /// De la imagen completa a la codificada (en el mismo buffer de comandos)
     func warp(_ cb: MTLCommandBuffer, _ s: MTLTexture, into dst: MTLTexture) {
-        if let b = cb.makeBlitCommandEncoder() { b.generateMipmaps(for: s); b.endEncoding() }
+        if FOVEA.on, let b = cb.makeBlitCommandEncoder() { b.generateMipmaps(for: s); b.endEncoding() }
         let rp = MTLRenderPassDescriptor()
         rp.colorAttachments[0].texture = dst
         rp.colorAttachments[0].loadAction = .dontCare
@@ -426,6 +442,184 @@ enum GpuShare {
               let h = unsafeBitCast(method_getImplementation(im), to: InitFn.self)(raw, NSSelectorFromString("initWithMachPort:"), port) else { return nil }
         let handle = Unmanaged<MTLSharedTextureHandle>.fromOpaque(h).takeRetainedValue()
         return device.makeSharedTexture(handle: handle)
+    }
+}
+/// Copia directa para el motor Linux (voile-lkd / Neptune): recibe descriptores 'DMTX' v2 + fd shm vía SCM_RIGHTS
+/// desde virgl_render_server y crea una MTLTexture lineal sin copias sobre la misma memoria unificada de Apple Silicon.
+enum NeptuneShare {
+    private struct Msg {
+        var magic: UInt32 = 0
+        var version: UInt32 = 0
+        var token: UInt64 = 0
+        var width: UInt32 = 0
+        var height: UInt32 = 0
+        var dxgiFormat: UInt32 = 0
+        var reserved: UInt32 = 0
+        var stride: UInt64 = 0
+        var size: UInt64 = 0
+        var offset: UInt64 = 0
+    }
+    private struct Entry {
+        let base: UnsafeMutableRawPointer
+        let mappedSize: Int
+        let delta: Int
+        let width: Int
+        let height: Int
+        let dxgiFormat: UInt32
+        let stride: Int
+    }
+    private static let cond = NSCondition()
+    private static var entries: [String: Entry] = [:]
+    private static var order: [String] = []
+    private static var started = false
+    static let socketPath = "/tmp/obelisk-vr-dmtx-\(getuid()).sock"
+
+    static func start() {
+        cond.lock()
+        if started { cond.unlock(); return }
+        started = true
+        cond.unlock()
+        Thread.detachNewThread { runServer() }
+    }
+
+    private static func runServer() {
+        unlink(socketPath)
+        let srv = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard srv >= 0 else { print("[juego] NeptuneShare: socket falló (\(errno))"); return }
+        var addr = sockaddr_un()
+        addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let maxPathLen = MemoryLayout.size(ofValue: addr.sun_path)
+        withUnsafeMutablePointer(to: &addr.sun_path) { dst in
+            socketPath.withCString { src in
+                _ = strlcpy(UnsafeMutableRawPointer(dst).assumingMemoryBound(to: CChar.self), src, maxPathLen)
+            }
+        }
+        let bound = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                bind(srv, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        guard bound == 0 else { close(srv); print("[juego] NeptuneShare: bind falló (\(errno))"); return }
+        chmod(socketPath, 0o600)
+        guard listen(srv, 16) == 0 else { close(srv); print("[juego] NeptuneShare: listen falló (\(errno))"); return }
+        print("[juego] NeptuneShare listo en \(socketPath)")
+        while true {
+            let cli = accept(srv, nil, nil)
+            if cli < 0 {
+                if errno == EINTR { continue }
+                usleep(50_000)
+                continue
+            }
+            receiveOne(cli)
+            close(cli)
+        }
+    }
+
+    private static func receiveOne(_ fd: Int32) {
+        var payload = Msg()
+        var cbuf = [UInt8](repeating: 0, count: 64)
+        var shmFd: Int32 = -1
+        withUnsafeMutableBytes(of: &payload) { pbuf in
+            cbuf.withUnsafeMutableBytes { ctrl in
+                var iov = iovec(iov_base: pbuf.baseAddress, iov_len: MemoryLayout<Msg>.size)
+                var msg = msghdr()
+                var n: ssize_t = -1
+                withUnsafeMutablePointer(to: &iov) { iovPtr in
+                    msg.msg_iov = iovPtr
+                    msg.msg_iovlen = 1
+                    msg.msg_control = ctrl.baseAddress
+                    msg.msg_controllen = socklen_t(ctrl.count)
+                    n = recvmsg(fd, &msg, 0)
+                }
+                guard n == MemoryLayout<Msg>.size else { return }
+                let hdrAligned = (MemoryLayout<cmsghdr>.size + 3) & ~3
+                guard Int(msg.msg_controllen) >= hdrAligned + MemoryLayout<Int32>.size,
+                      let base = ctrl.baseAddress else { return }
+                let cm = base.assumingMemoryBound(to: cmsghdr.self).pointee
+                guard cm.cmsg_level == SOL_SOCKET, cm.cmsg_type == SCM_RIGHTS,
+                      Int(cm.cmsg_len) >= hdrAligned + MemoryLayout<Int32>.size else { return }
+                shmFd = (base + hdrAligned).loadUnaligned(as: Int32.self)
+            }
+        }
+        if shmFd >= 0 {
+            store(payload, shmFd: shmFd)
+        }
+    }
+
+    private static func store(_ m: Msg, shmFd: Int32) {
+        defer { close(shmFd) }
+        guard m.magic == 0x4452564E, m.version == 1,
+              m.width > 0, m.height > 0, m.width <= 8192, m.height <= 4096,
+              m.stride >= UInt64(m.width) * 4, m.size >= m.stride * UInt64(m.height) else { return }
+        let page = UInt64(getpagesize())
+        let mapFloor = m.offset & ~(page - 1)
+        let delta = m.offset - mapFloor
+        let mappedSize = (delta + m.size + page - 1) & ~(page - 1)
+        var st = stat()
+        guard fstat(shmFd, &st) == 0, UInt64(st.st_size) >= mapFloor + mappedSize else { return }
+        let mapped = mmap(nil, Int(mappedSize), PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, off_t(mapFloor))
+        guard let base = mapped, base != MAP_FAILED else { return }
+
+        let key = String(format: "NEPTUNE_DMTX_%016llx", m.token)
+        let entry = Entry(base: base, mappedSize: Int(mappedSize), delta: Int(delta),
+                          width: Int(m.width), height: Int(m.height),
+                          dxgiFormat: m.dxgiFormat, stride: Int(m.stride))
+        cond.lock()
+        if let old = entries.removeValue(forKey: key) {
+            munmap(old.base, old.mappedSize)
+            order.removeAll { $0 == key }
+        }
+        entries[key] = entry
+        order.append(key)
+        while order.count > 32 {
+            let oldest = order.removeFirst()
+            if let old = entries.removeValue(forKey: oldest) {
+                munmap(old.base, old.mappedSize)
+            }
+        }
+        cond.broadcast()
+        cond.unlock()
+    }
+
+    static func open(_ name: String, device: MTLDevice) -> MTLTexture? {
+        let deadline = Date(timeIntervalSinceNow: 0.35)
+        cond.lock()
+        while entries[name] == nil {
+            if !cond.wait(until: deadline) { break }
+        }
+        guard let e = entries.removeValue(forKey: name) else {
+            cond.unlock()
+            print("[juego] Copia directa (Neptune): no encontré «\(name)»")
+            return nil
+        }
+        order.removeAll { $0 == name }
+        cond.unlock()
+
+        let pixelFormat: MTLPixelFormat
+        switch e.dxgiFormat {
+        case 27, 28, 29: pixelFormat = .rgba8Unorm   // DXGI_FORMAT_R8G8B8A8_{TYPELESS,UNORM,UNORM_SRGB}
+        case 87, 90, 91: pixelFormat = .bgra8Unorm   // DXGI_FORMAT_B8G8R8A8_{UNORM,TYPELESS,UNORM_SRGB}
+        default:
+            print("[juego] Copia directa (Neptune): formato DXGI \(e.dxgiFormat) no soportado")
+            munmap(e.base, e.mappedSize)
+            return nil
+        }
+        guard let buf = device.makeBuffer(bytesNoCopy: e.base, length: e.mappedSize, options: .storageModeShared, deallocator: { ptr, len in
+            munmap(ptr, len)
+        }) else {
+            print("[juego] Copia directa (Neptune): makeBuffer falló para «\(name)»")
+            munmap(e.base, e.mappedSize)
+            return nil
+        }
+        let td = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: pixelFormat, width: e.width, height: e.height, mipmapped: false)
+        td.storageMode = .shared
+        td.usage = [.shaderRead]
+        guard let tex = buf.makeTexture(descriptor: td, offset: e.delta, bytesPerRow: e.stride) else {
+            print("[juego] Copia directa (Neptune): makeTexture falló (\(e.width)x\(e.height), stride=\(e.stride), delta=\(e.delta))")
+            return nil
+        }
+        return tex
     }
 }
 let FPS = Int(env["VR_FPS"] ?? "") ?? 72
@@ -666,8 +860,8 @@ final class Encoder {
             set(kVTCompressionPropertyKey_ProfileLevel, kVTProfileLevel_H264_High_AutoLevel, quiet: true)
         }
         set(kVTCompressionPropertyKey_AllowFrameReordering, kCFBooleanFalse)
-        // Menos espera por cuadro: velocidad antes que calidad (la calidad la da la tasa de bits) y sin modo de ahorro
-        set(kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, kCFBooleanTrue, quiet: true)
+        // Solo priorizar velocidad sobre calidad a tasas bajas; a tasas altas (>=80 Mbps) Apple Silicon codifica en ~2-3 ms con mucha más nitidez
+        set(kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, BITRATE < 80_000_000 ? kCFBooleanTrue : kCFBooleanFalse, quiet: true)
         set(kVTCompressionPropertyKey_MaximizePowerEfficiency, kCFBooleanFalse, quiet: true)
         set(kVTCompressionPropertyKey_AverageBitRate, NSNumber(value: BITRATE))
         set(kVTCompressionPropertyKey_ExpectedFrameRate, NSNumber(value: FPS))
@@ -1042,10 +1236,10 @@ final class GameProfiles {
                 g.vive ?? (GameProfiles.viveByDefault.contains(key) ? true : a.vive ?? false))
     }
     func hasOwn(_ key: String) -> Bool { lock.lock(); defer { lock.unlock() }; return !key.isEmpty && data[key] != nil }
-    /// El juego que se abrió: por la carpeta de Steam (si se encuentra) o por el nombre que da el juego
+    /// El juego que se abrió: por la carpeta lanzada desde Obelisk / SteamVR, la carpeta de Steam o el nombre del juego
     func begin(app: String) {
-        // (SteamVR real se abre antes que el juego: sus ajustes son los del juego que abrió jugar.sh, de lanzando.txt)
-        let key = (app == "SteamVR" ? GameProfiles.launchingFolder() : nil) ?? GameProfiles.steamFolder() ?? app
+        let fromLauncher = (app == "SteamVR" || env["OBELISK_VR_HOST"] == "1") ? GameProfiles.launchingFolder() : nil
+        let key = fromLauncher ?? GameProfiles.steamFolder() ?? app
         lock.lock(); current = key; autoN = 0; autoFps = 0; autoGame = 0; autoSince = Date().timeIntervalSince1970; lock.unlock()
         let e = effective(key)
         lock.lock(); activeK = e.fovk; lock.unlock()
@@ -1097,6 +1291,7 @@ final class GameProfiles {
         var o: [String: Any] = ["all": ["scale": a.scale, "auto": a.auto, "fovk": a.fovk, "index": a.index, "vive": a.vive]]
         // Los juegos con ajustes propios (lo que eligió el usuario para cada uno; lo demás sale de «all»)
         lock.lock()
+        reload()
         var own: [String: Any] = [:]
         for (k, p) in data where !k.isEmpty {
             var g: [String: Any] = [:]
@@ -1147,14 +1342,21 @@ final class GameProfiles {
         lock.unlock()
         if changed { print("[juego] Escala automática de «\(key)»: \(Int((p.scale ?? 1) * 100)) % (se usa la próxima vez que lo abras)") }
     }
-    /// La carpeta de Steam del juego que está corriendo (steamapps\common\<carpeta>)
-    /// La carpeta del juego que jugar.sh está abriendo (hace menos de 4 minutos), si la hay
+    /// La carpeta del juego que se está abriendo (lanzando.txt reciente o active-game.txt escrito por Obelisk)
     static func launchingFolder() -> String? {
         let path = "lanzando.txt"
-        guard let m = (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date,
-              Date().timeIntervalSince(m) < 240, let txt = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
-        let f = txt.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\t")
-        return f.count >= 5 && !f[4].isEmpty ? f[4] : nil
+        if let m = (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date,
+           Date().timeIntervalSince(m) < 1800,
+           let txt = try? String(contentsOfFile: path, encoding: .utf8) {
+            let f = txt.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\t")
+            if f.count >= 5 && !f[4].isEmpty { return f[4] }
+        }
+        if env["OBELISK_VR_HOST"] == "1",
+           let txt = try? String(contentsOfFile: "active-game.txt", encoding: .utf8) {
+            let folder = txt.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !folder.isEmpty { return folder }
+        }
+        return nil
     }
     static func steamFolder() -> String? {
         let p = Process(); p.executableURL = URL(fileURLWithPath: "/bin/ps"); p.arguments = ["-axo", "command="]
@@ -1163,9 +1365,17 @@ final class GameProfiles {
         let out = String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         p.waitUntilExit()
         for l in out.split(separator: "\n") {
-            guard let r = l.range(of: "steamapps\\common\\") else { continue }
-            let rest = l[r.upperBound...]
-            if let e = rest.firstIndex(of: "\\") { return String(rest[..<e]) }
+            if let r = l.range(of: "steamapps\\common\\") {
+                let rest = l[r.upperBound...]
+                if let e = rest.firstIndex(of: "\\") { return String(rest[..<e]) }
+            }
+            for marker in ["/Games/Steam/", "/Games/Epic/", "/Games/GOG/"] {
+                if let r = l.range(of: marker) {
+                    let rest = l[r.upperBound...]
+                    let folder = rest.prefix { $0 != "/" && $0 != "\\" && $0 != " " && $0 != "\"" }
+                    if !folder.isEmpty { return String(folder) }
+                }
+            }
         }
         return nil
     }
@@ -1482,7 +1692,11 @@ final class GameLink {
                 if let dev = Foveator.shared?.dev {
                     for i in 0..<3 {
                         let bytes = buf[(10 + i * 56)..<(10 + i * 56 + 56)].prefix { $0 != 0 }
-                        if let t = GpuShare.open(String(decoding: bytes, as: UTF8.self), device: dev), t.width >= ew * 2, t.height >= eh { list.append(t) }
+                        let name = String(decoding: bytes, as: UTF8.self)
+                        let opened = name.hasPrefix("NEPTUNE_DMTX_")
+                            ? NeptuneShare.open(name, device: dev)
+                            : GpuShare.open(name, device: dev)
+                        if let t = opened, t.width >= ew * 2, t.height >= eh { list.append(t) }
                     }
                 }
                 gpuTex = list.count == 3 ? list : []
@@ -2361,7 +2575,18 @@ final class DesktopCapture: NSObject, SCStreamOutput {
     var displayID: CGDirectDisplayID = CGMainDisplayID()
     private var tries = 0
 
+    private static var requestedAccess = false
+
     func start() {
+        if !CGPreflightScreenCaptureAccess() {
+            failed = "Falta el permiso de grabación de pantalla"
+            if !Self.requestedAccess {
+                Self.requestedAccess = true
+                _ = CGRequestScreenCaptureAccess()
+                print("[escritorio] Falta el permiso de grabación de pantalla. Activá Obelisk en Ajustes del Sistema > Privacidad y seguridad > Grabación de pantalla y audio del sistema.")
+            }
+            return
+        }
         SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { [self] content, err in
             // Un monitor virtual recién creado tarda un momento en aparecer
             if let content, displayID != CGMainDisplayID(), !content.displays.contains(where: { $0.displayID == displayID }), tries < 8 {
@@ -2975,7 +3200,28 @@ final class Lobby {
             }
         }
         if !gameActive { gameName = "" } else { lastGameActive = Date() }
-        let obj: [String: Any] = ["type": "lobby2d", "launching": launchingInfo(gameActive) ?? NSNull(), "game": gameActive, "gameName": gameName, "macModel": macModel, "macChip": macChip, "busy": b, "status": st, "desk": desktopOn, "deskErr": err,
+        var remoteHud: Any = NSNull()
+        var remoteHudRev = 0
+        if let hudTxt = try? String(contentsOfFile: "hud-toggle.txt", encoding: .utf8) {
+            let parts = hudTxt.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\t")
+            if parts.count >= 2, let rev = Int(parts[1]), rev > 0 {
+                remoteHud = parts[0] == "1"
+                remoteHudRev = rev
+            }
+        }
+        var remoteFrameGen: Any = NSNull()
+        var remoteFrameGenRev = 0
+        if let fgTxt = try? String(contentsOfFile: "framegen-toggle.txt", encoding: .utf8) {
+            let parts = fgTxt.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\t")
+            if parts.count >= 2, let mode = Int(parts[0]), let rev = Int(parts[1]), rev > 0 {
+                remoteFrameGen = max(0, min(2, mode))
+                remoteFrameGenRev = rev
+            }
+        }
+        let obj: [String: Any] = ["type": "lobby2d", "obelisk": env["OBELISK_VR_HOST"] == "1",
+                                  "remoteHud": remoteHud, "remoteHudRev": remoteHudRev,
+                                  "remoteFrameGen": remoteFrameGen, "remoteFrameGenRev": remoteFrameGenRev,
+                                  "launching": launchingInfo(gameActive) ?? NSNull(), "game": gameActive, "gameName": gameName, "macModel": macModel, "macChip": macChip, "busy": b, "status": st, "desk": desktopOn, "deskErr": err,
                                   "depth3d": depth3D.enabled, "depthStatus": depth3D.statusText,
                                   "cfg": ["eye": GEN_EYE, "fps": GEN_FPS, "mbps": GEN_MBPS, "audioMac": env["VR_AUDIO_MAC"] == "1", "fov": GEN_FOV,   // (los generales)
                                           "codec": env["VR_CODEC"] ?? "hevc", "run": "\(EYE) · \(FPS) Hz · \(BITRATE / 1_000_000) Mbps",
@@ -3119,6 +3365,7 @@ final class Lobby {
 
     private func scanWindows() {
         guard #available(macOS 13.0, *) else { return }
+        guard CGPreflightScreenCaptureAccess() else { return }
         SCShareableContent.getExcludingDesktopWindows(true, onScreenWindowsOnly: true) { [weak self] content, _ in
             guard let self, let content else { return }
             var list: [MacWindow] = []
@@ -4121,6 +4368,7 @@ final class NativeLink {
                 inet_ntop(AF_INET6, &a6, &ipBuf, socklen_t(ipBuf.count))
                 var ip = String(cString: ipBuf)
                 if ip.hasPrefix("::ffff:") { ip = String(ip.dropFirst(7)) }   // IPv4 (Wi-Fi)
+                if !ip.hasPrefix("fe80") { QuestProTongueTracker.shared.setQuestIP(ip) }
                 if ip.hasPrefix("fe80") { print("[quest] Conexión por el cable USB-C") }
                 else if CABLE_ONLY {
                     print("[quest] Conexión por Wi-Fi rechazada (VRmin Host: «Solo por cable USB-C»)")
@@ -4416,11 +4664,1098 @@ do {
 // Mensajes del visor (de la página web o de la app nativa)
 let renderQueue = DispatchQueue(label: "render", qos: .userInteractive)
 let questDecoder = JSONDecoder()
+// MARK: - Rooted Quest Pro Stereo Tongue Tracker (QuestProCameraService MJPEG → CoreML ANE)
+/// Connects to MenekoByte's QuestProCameraService (/mouth.mjpg, 800×400 stereo lower-face IR
+/// cameras on TCP 27280 via USB `adb forward` or Wi-Fi), runs Qpro-Enhanced-FT's pre-trained
+/// stereo gate (224×224) + direction (192×192) CoreML models on the Apple Neural Engine (~0.9 ms),
+/// and fuses with Quest Pro OpenXR native TongueOut to produce full 3D TongueX/TongueY/TongueOut.
+final class QuestProTongueTracker {
+    static let shared = QuestProTongueTracker()
+
+    struct ExpandedTongue {
+        var ext: Float = 0
+        var up: Float = 0
+        var down: Float = 0
+        var left: Float = 0
+        var right: Float = 0
+        var roll: Float = 0
+        var bendDown: Float = 0
+        var curlUp: Float = 0
+        var squish: Float = 0
+        var flat: Float = 0
+        var twistLeft: Float = 0
+        var twistRight: Float = 0
+    }
+
+    private let lock = NSLock()
+    private var started = false
+    private var questIP: String?
+    private var nativeTongueOut: Float = 0
+    private var nativeTongueAt: Double = 0
+    private var latestValues = ExpandedTongue()
+    private var latestAt: Double = 0
+
+    // Temporal smoothing state (matches Qpro-Enhanced-FT LiveTongueModelPreview)
+    private var emaValues = [Float](repeating: 0, count: 10)
+    private var emaInitialized = false
+    private var emaUpdatedAt: Double = 0
+    private var visVisible = false
+    private var visLastConfAt: Double = 0
+    private var visLastConfVals = [Float](repeating: 0, count: 10)
+    private var smooth12 = [Float](repeating: 0, count: 12)
+    private var smoothAt: Double = 0
+    private var loggedActive = false
+
+    private init() {}
+
+    func setQuestIP(_ ip: String) {
+        lock.lock()
+        questIP = ip
+        lock.unlock()
+    }
+
+    func updateNativeTongueOut(_ val: Float) {
+        let now = ProcessInfo.processInfo.systemUptime
+        lock.lock()
+        nativeTongueOut = max(0, min(1, val))
+        nativeTongueAt = now
+        lock.unlock()
+    }
+
+    func startIfAvailable() {
+        lock.lock()
+        if started { lock.unlock(); return }
+        started = true
+        lock.unlock()
+
+        let dataDir = env["QVB_DATA"] ?? FileManager.default.currentDirectoryPath
+        let modelsDir = URL(fileURLWithPath: dataDir).appendingPathComponent("Models")
+        let gateURL = modelsDir.appendingPathComponent("qpro-tongue-v15-gate.mlmodelc")
+        let dirURL = modelsDir.appendingPathComponent("qpro-tongue-v15-direction.mlmodelc")
+        guard FileManager.default.fileExists(atPath: gateURL.path),
+              FileManager.default.fileExists(atPath: dirURL.path) else { return }
+
+        Thread.detachNewThread { [weak self] in
+            self?.runLoop(gateURL: gateURL, dirURL: dirURL)
+        }
+    }
+
+    func latestExpandedTongue() -> ExpandedTongue? {
+        let now = ProcessInfo.processInfo.systemUptime
+        lock.lock()
+        defer { lock.unlock() }
+        guard latestAt > 0, now - latestAt < 0.35 else { return nil }
+        return latestValues
+    }
+
+    private func setupAdbForwardIfAvailable() {
+        let candidates = [
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Android/sdk/platform-tools/adb").path,
+            "/opt/homebrew/bin/adb",
+            "/usr/local/bin/adb"
+        ]
+        guard let adb = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: adb)
+        p.arguments = ["forward", "tcp:27280", "tcp:27280"]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        try? p.run()
+        p.waitUntilExit()
+    }
+
+    private func runLoop(gateURL: URL, dirURL: URL) {
+        let cfg = MLModelConfiguration()
+        cfg.computeUnits = .all
+        guard let gateModel = try? MLModel(contentsOf: gateURL, configuration: cfg),
+              let dirModel = try? MLModel(contentsOf: dirURL, configuration: cfg),
+              let gateArr = try? MLMultiArray(shape: [1, 2, 224, 224], dataType: .float32),
+              let dirArr = try? MLMultiArray(shape: [1, 2, 192, 192], dataType: .float32) else {
+            print("[vrcft] Failed to load CoreML stereo tongue models")
+            return
+        }
+
+        let grayCS = CGColorSpaceCreateDeviceGray()
+        var gateBytes0 = [UInt8](repeating: 0, count: 224 * 224)
+        var gateBytes1 = [UInt8](repeating: 0, count: 224 * 224)
+        var dirBytes0 = [UInt8](repeating: 0, count: 192 * 192)
+        var dirBytes1 = [UInt8](repeating: 0, count: 192 * 192)
+        var lastForwardAt: Double = 0
+
+        while true {
+            let now = ProcessInfo.processInfo.systemUptime
+            if now - lastForwardAt > 15.0 {
+                lastForwardAt = now
+                setupAdbForwardIfAvailable()
+            }
+
+            lock.lock()
+            let qip = questIP
+            lock.unlock()
+
+            var hosts: [(String, UInt16)] = [("127.0.0.1", 27280)]
+            if let custom = env["VR_TONGUE_CAM_HOST"], !custom.isEmpty {
+                hosts.insert((custom, 27280), at: 0)
+            }
+            if let qip, !qip.isEmpty, qip != "127.0.0.1" {
+                hosts.append((qip, 27280))
+            }
+
+            var connectedAny = false
+            for (host, port) in hosts {
+                if streamMJPEG(host: host, port: port,
+                               gateModel: gateModel, dirModel: dirModel,
+                               gateArr: gateArr, dirArr: dirArr,
+                               grayCS: grayCS,
+                               gateBytes0: &gateBytes0, gateBytes1: &gateBytes1,
+                               dirBytes0: &dirBytes0, dirBytes1: &dirBytes1) {
+                    connectedAny = true
+                    break
+                }
+            }
+            usleep(connectedAny ? 500_000 : 3_000_000)
+        }
+    }
+
+    private func connectTCP(host: String, port: UInt16) -> Int32 {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { return -1 }
+        var tv = timeval(tv_sec: 2, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        var addr = sockaddr_in()
+        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = port.bigEndian
+        guard inet_pton(AF_INET, host, &addr.sin_addr) == 1 else { close(fd); return -1 }
+        let ok = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        if ok != 0 { close(fd); return -1 }
+        return fd
+    }
+
+    private func streamMJPEG(
+        host: String, port: UInt16,
+        gateModel: MLModel, dirModel: MLModel,
+        gateArr: MLMultiArray, dirArr: MLMultiArray,
+        grayCS: CGColorSpace,
+        gateBytes0: inout [UInt8], gateBytes1: inout [UInt8],
+        dirBytes0: inout [UInt8], dirBytes1: inout [UInt8]
+    ) -> Bool {
+        let fd = connectTCP(host: host, port: port)
+        guard fd >= 0 else { return false }
+        defer { close(fd) }
+
+        let req = "GET /mouth.mjpg HTTP/1.1\r\nHost: \(host):\(port)\r\nConnection: keep-alive\r\n\r\n"
+        let reqBytes = Array(req.utf8)
+        let sent = send(fd, reqBytes, reqBytes.count, 0)
+        guard sent == reqBytes.count else { return false }
+
+        var tv = timeval(tv_sec: 4, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        var buf = [UInt8]()
+        buf.reserveCapacity(262_144)
+        var tmp = [UInt8](repeating: 0, count: 32_768)
+        var gotFrame = false
+
+        while true {
+            let n = recv(fd, &tmp, tmp.count, 0)
+            if n <= 0 { break }
+            buf.append(contentsOf: tmp.prefix(n))
+            if buf.count > 2_000_000 { buf.removeAll(keepingCapacity: true); continue }
+
+            // Extract latest complete JPEG frame (0xFF 0xD8 ... 0xFF 0xD9) using 0-based [UInt8] indices
+            while true {
+                guard let soi = findMarker(buf, 0xFF, 0xD8, from: 0) else {
+                    if buf.count > 4096 { buf.removeFirst(buf.count - 4) }
+                    break
+                }
+                if soi > 0 { buf.removeFirst(soi) }
+                guard let eoi = findMarker(buf, 0xFF, 0xD9, from: 2) else { break }
+                let end = eoi + 2
+                guard end <= buf.count else { break }
+                let jpeg = Data(buf[0..<end])
+                buf.removeFirst(end)
+                // If another complete JPEG is already queued behind this one, skip to newest for lowest latency
+                if let nextSoi = findMarker(buf, 0xFF, 0xD8, from: 0),
+                   findMarker(buf, 0xFF, 0xD9, from: nextSoi + 2) != nil {
+                    continue
+                }
+                gotFrame = true
+                autoreleasepool {
+                    processStereoJPEG(jpeg, host: host,
+                                      gateModel: gateModel, dirModel: dirModel,
+                                      gateArr: gateArr, dirArr: dirArr,
+                                      grayCS: grayCS,
+                                      gateBytes0: &gateBytes0, gateBytes1: &gateBytes1,
+                                      dirBytes0: &dirBytes0, dirBytes1: &dirBytes1)
+                }
+            }
+        }
+        return gotFrame
+    }
+
+    private func findMarker(_ bytes: [UInt8], _ b0: UInt8, _ b1: UInt8, from start: Int) -> Int? {
+        let count = bytes.count
+        guard start >= 0 && count >= start + 2 else { return nil }
+        return bytes.withUnsafeBufferPointer { ptr -> Int? in
+            guard let base = ptr.baseAddress else { return nil }
+            var i = start
+            let limit = count - 1
+            while i < limit {
+                if base[i] == b0 && base[i + 1] == b1 { return i }
+                i += 1
+            }
+            return nil
+        }
+    }
+
+    private func fillStereoArray(
+        img: CGImage, size: Int,
+        grayCS: CGColorSpace,
+        buf0: inout [UInt8], buf1: inout [UInt8],
+        arr: MLMultiArray
+    ) -> Bool {
+        let w = img.width, h = img.height
+        guard w >= 800 && h >= 400 else { return false }
+        let halfW = 400
+        guard let leftCrop = img.cropping(to: CGRect(x: 0, y: 0, width: halfW, height: 400)),
+              let rightCrop = img.cropping(to: CGRect(x: halfW, y: 0, width: halfW, height: 400)) else { return false }
+
+        let count = size * size
+        buf0.withUnsafeMutableBytes { raw in
+            if let ctx = CGContext(data: raw.baseAddress, width: size, height: size, bitsPerComponent: 8,
+                                   bytesPerRow: size, space: grayCS, bitmapInfo: 0) {
+                ctx.interpolationQuality = .medium
+                ctx.draw(leftCrop, in: CGRect(x: 0, y: 0, width: size, height: size))
+            }
+        }
+        buf1.withUnsafeMutableBytes { raw in
+            if let ctx = CGContext(data: raw.baseAddress, width: size, height: size, bitsPerComponent: 8,
+                                   bytesPerRow: size, space: grayCS, bitmapInfo: 0) {
+                ctx.interpolationQuality = .medium
+                ctx.draw(rightCrop, in: CGRect(x: 0, y: 0, width: size, height: size))
+            }
+        }
+
+        let dst = arr.dataPointer.bindMemory(to: Float.self, capacity: count * 2)
+        var div: Float = 255.0
+        buf0.withUnsafeBufferPointer { src in
+            guard let base = src.baseAddress else { return }
+            vDSP_vfltu8(base, 1, dst, 1, vDSP_Length(count))
+            vDSP_vsdiv(dst, 1, &div, dst, 1, vDSP_Length(count))
+        }
+        buf1.withUnsafeBufferPointer { src in
+            guard let base = src.baseAddress else { return }
+            let dst1 = dst.advanced(by: count)
+            vDSP_vfltu8(base, 1, dst1, 1, vDSP_Length(count))
+            vDSP_vsdiv(dst1, 1, &div, dst1, 1, vDSP_Length(count))
+        }
+        return true
+    }
+
+    private func processStereoJPEG(
+        _ jpeg: Data, host: String,
+        gateModel: MLModel, dirModel: MLModel,
+        gateArr: MLMultiArray, dirArr: MLMultiArray,
+        grayCS: CGColorSpace,
+        gateBytes0: inout [UInt8], gateBytes1: inout [UInt8],
+        dirBytes0: inout [UInt8], dirBytes1: inout [UInt8]
+    ) {
+        guard let src = CGImageSourceCreateWithData(jpeg as CFData, nil),
+              let img = CGImageSourceCreateImageAtIndex(src, 0, nil) else { return }
+        guard fillStereoArray(img: img, size: 224, grayCS: grayCS, buf0: &gateBytes0, buf1: &gateBytes1, arr: gateArr),
+              fillStereoArray(img: img, size: 192, grayCS: grayCS, buf0: &dirBytes0, buf1: &dirBytes1, arr: dirArr) else { return }
+
+        guard let gateIn = try? MLDictionaryFeatureProvider(dictionary: ["cameras": gateArr]),
+              let dirIn = try? MLDictionaryFeatureProvider(dictionary: ["cameras": dirArr]),
+              let gateOut = try? gateModel.prediction(from: gateIn),
+              let dirOut = try? dirModel.prediction(from: dirIn),
+              let gVals = gateOut.featureValue(for: "values")?.multiArrayValue,
+              let dVals = dirOut.featureValue(for: "values")?.multiArrayValue,
+              gVals.count >= 10, dVals.count >= 10 else { return }
+
+        var raw = [Float](repeating: 0, count: 10)
+        raw[0] = gVals[0].floatValue
+        for i in 1..<10 { raw[i] = dVals[i].floatValue }
+        for i in 0..<10 { if !raw[i].isFinite { raw[i] = 0 } }
+
+        let now = ProcessInfo.processInfo.systemUptime
+        if emaInitialized && now - emaUpdatedAt > 0.30 {
+            emaInitialized = false
+            visVisible = false
+            smoothAt = 0
+        }
+
+        // 1. TongueMotionFilter (adaptive EMA at 24 FPS equivalent, smoothing = 0.35)
+        if !emaInitialized {
+            emaValues = raw
+            emaInitialized = true
+        } else {
+            let dt = min(max(now - emaUpdatedAt, 0.001), 0.10)
+            let baseSmooth: Float = 0.35
+            for i in 0..<10 {
+                let isMotion: Float = (i == 0) ? 0.0 : 1.0
+                let movement = max(0, min(1, (abs(raw[i] - emaValues[i]) - 0.06) / 0.30))
+                let a24 = baseSmooth + (0.90 - baseSmooth) * movement * isMotion
+                let alpha = 1.0 - powf(1.0 - a24, Float(dt * 24.0))
+                emaValues[i] += alpha * (raw[i] - emaValues[i])
+            }
+        }
+        emaUpdatedAt = now
+
+        // 2. Visibility fusion (0.60 * camera + 0.40 * native OpenXR TongueOut, threshold 0.50, hysteresis 0.42, 0.22s hold)
+        lock.lock()
+        let native = (now - nativeTongueAt < 0.30) ? nativeTongueOut : 0.0
+        lock.unlock()
+
+        let camVis = max(0, min(1, emaValues[0]))
+        let fusedVis = 0.60 * camVis + 0.40 * native
+        let cutoff: Float = visVisible ? 0.42 : 0.50
+        let activeVals: [Float]
+        let isVisible: Bool
+        if fusedVis >= cutoff {
+            visVisible = true
+            visLastConfAt = now
+            visLastConfVals = emaValues
+            activeVals = emaValues
+            isVisible = true
+        } else if visVisible && (now - visLastConfAt <= 0.22) {
+            activeVals = visLastConfVals
+            isVisible = true
+        } else {
+            visVisible = false
+            activeVals = emaValues
+            isVisible = false
+        }
+
+        // 3. Map to 12 VRCFT tongue channels & apply slew-rate smoothing
+        func clamp01(_ x: Float) -> Float { max(0, min(1, x)) }
+        func clamp11(_ x: Float) -> Float { max(-1, min(1, x)) }
+        var target = [Float](repeating: 0, count: 12)
+        if isVisible {
+            let horiz = clamp11(activeVals[2])
+            let vert = clamp11(activeVals[3])
+            let twist = clamp11(activeVals[9])
+            target[0] = clamp01(activeVals[1])        // extension
+            target[1] = clamp01(max(vert, 0))         // up
+            target[2] = clamp01(max(-vert, 0))        // down
+            target[3] = clamp01(max(-horiz, 0))       // left
+            target[4] = clamp01(max(horiz, 0))        // right
+            target[5] = clamp01(activeVals[6])        // roll
+            target[6] = clamp01(activeVals[5])        // bend_down
+            target[7] = clamp01(activeVals[4])        // curl_up
+            target[8] = clamp01(activeVals[8])        // squish
+            target[9] = clamp01(activeVals[7])        // flat
+            target[10] = clamp01(max(-twist, 0))      // twist_left
+            target[11] = clamp01(max(twist, 0))       // twist_right
+        }
+
+        if smoothAt == 0 {
+            smooth12 = target
+        } else {
+            let dt = Float(min(max(now - smoothAt, 0.0), 0.04))
+            let maxRise = dt / 0.10
+            let maxFall = dt / 0.12
+            for i in 0..<12 {
+                let delta = max(-maxFall, min(maxRise, target[i] - smooth12[i]))
+                smooth12[i] = clamp01(smooth12[i] + delta)
+            }
+        }
+        smoothAt = now
+
+        let res = ExpandedTongue(
+            ext: smooth12[0], up: smooth12[1], down: smooth12[2],
+            left: smooth12[3], right: smooth12[4], roll: smooth12[5],
+            bendDown: smooth12[6], curlUp: smooth12[7], squish: smooth12[8],
+            flat: smooth12[9], twistLeft: smooth12[10], twistRight: smooth12[11]
+        )
+
+        var shouldLog = false
+        lock.lock()
+        latestValues = res
+        latestAt = now
+        if !loggedActive { loggedActive = true; shouldLog = true }
+        lock.unlock()
+        if shouldLog {
+            print("[vrcft] Rooted Quest Pro Expanded Tongue Tracking active (CoreML ANE · http://\(host):27280/mouth.mjpg)")
+        }
+    }
+}
+
+// MARK: - Quest Pro Eye & Face Tracking → VRCFaceTracking / VRChat OSC (127.0.0.1:9000)
+/// Receives binary packet 0x0C from the Obelisk VR Quest APK (XR_FB_eye_tracking_social +
+/// XR_FB_face_tracking2 70-expression weights) and streams both VRChat native eye tracking
+/// (`/tracking/eye/*`) and VRCFaceTracking v5 Unified Expressions (`FT/v2/*`, `v2/*`, plus
+/// automatic Jerry's Templates binary-bool discovery from VRChat's avatar OSC JSON).
+final class VRCFaceTrackingOSC {
+    static let shared = VRCFaceTrackingOSC()
+
+    private struct BinaryBinding {
+        let key: String
+        let bits: [(weight: Int, address: String)]
+        let negativeAddress: String?
+        let maxInt: Int
+    }
+
+    private let lock = NSLock()
+    private var sock: Int32 = -1
+    private var dest = sockaddr_in()
+    private var enabled = env["VR_FACE_TRACKING"] != "0"
+    private var lastToggleCheck: UInt64 = 0
+    private var lastFullRefresh: UInt64 = 0
+    private var lastAvatarScan: UInt64 = 0
+    private var loggedActive = false
+    private var listenerStarted = false
+    private var currentAvatarId: String?
+
+    private var lastFloat: [String: Float] = [:]
+    private var lastBool: [String: Bool] = [:]
+    private var avatarFloatBindings: [(address: String, key: String)] = []
+    private var avatarBinaryBindings: [BinaryBinding] = []
+    private var avatarStatusBools: [(address: String, isEye: Bool)] = []
+    private var avatarLoadedName: String = ""
+
+    private static let fallbackKeys: [String] = [
+        "EyeLeftX", "EyeLeftY", "EyeRightX", "EyeRightY", "EyeX", "EyeY",
+        "EyeClosedLeft", "EyeClosedRight", "EyeOpenLeft", "EyeOpenRight",
+        "EyeLidLeft", "EyeLidRight", "EyeLid", "EyeLidExpandedLeft", "EyeLidExpandedRight", "EyeLidExpanded",
+        "EyeLidExpandedSqueezeLeft", "EyeLidExpandedSqueezeRight", "EyeLidExpandedSqueeze",
+        "EyeSquintLeft", "EyeSquintRight", "EyeWideLeft", "EyeWideRight",
+        "BrowPinchLeft", "BrowPinchRight", "BrowLowererLeft", "BrowLowererRight",
+        "BrowInnerUpLeft", "BrowInnerUpRight", "BrowOuterUpLeft", "BrowOuterUpRight",
+        "BrowUpLeft", "BrowUpRight", "BrowDownLeft", "BrowDownRight",
+        "BrowExpressionLeft", "BrowExpressionRight",
+        "CheekPuffLeft", "CheekPuffRight", "CheekSuckLeft", "CheekSuckRight",
+        "CheekPuffSuckLeft", "CheekPuffSuckRight",
+        "CheekSquintLeft", "CheekSquintRight", "NoseSneerLeft", "NoseSneerRight", "NoseSneer",
+        "JawOpen", "JawLeft", "JawRight", "JawX", "JawForward", "MouthClosed",
+        "MouthUpperUpLeft", "MouthUpperUpRight", "MouthUpperUp",
+        "MouthLowerDownLeft", "MouthLowerDownRight", "MouthLowerDown",
+        "MouthCornerPullLeft", "MouthCornerPullRight", "MouthFrownLeft", "MouthFrownRight",
+        "MouthStretchLeft", "MouthStretchRight", "MouthDimpleLeft", "MouthDimpleRight",
+        "MouthRaiserUpper", "MouthRaiserLower", "MouthPressLeft", "MouthPressRight", "MouthPress",
+        "MouthTightenerLeft", "MouthTightenerRight", "MouthX",
+        "SmileFrownLeft", "SmileFrownRight", "SmileSadLeft", "SmileSadRight",
+        "LipSuckUpperLeft", "LipSuckUpperRight", "LipSuckUpper",
+        "LipSuckLowerLeft", "LipSuckLowerRight", "LipSuckLower",
+        "LipFunnelUpperLeft", "LipFunnelUpperRight", "LipFunnelLowerLeft", "LipFunnelLowerRight",
+        "LipPuckerUpperLeft", "LipPuckerUpperRight", "LipPuckerLowerLeft", "LipPuckerLowerRight",
+        "LipPucker", "LipFunnel", "LipSuck",
+        "TongueOut", "TongueLongStep1", "TongueLongStep2", "TongueUp", "TongueDown", "TongueLeft", "TongueRight",
+        "TongueY", "TongueX", "TongueCurlUp", "TongueBendDown", "TongueRoll", "TongueFlat", "TongueSquish",
+        "TongueTwistLeft", "TongueTwistRight"
+    ]
+
+    private init() {
+        let port = UInt16(env["VR_OSC_PORT"] ?? "") ?? 9000
+        dest.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        dest.sin_family = sa_family_t(AF_INET)
+        dest.sin_port = port.bigEndian
+        dest.sin_addr.s_addr = inet_addr("127.0.0.1")
+    }
+
+    private func ensureSocket() -> Int32 {
+        if sock >= 0 { return sock }
+        sock = socket(AF_INET, SOCK_DGRAM, 0)
+        return sock
+    }
+
+    private func startAvatarListenerIfNeeded() {
+        guard !listenerStarted else { return }
+        listenerStarted = true
+        let recvPort = UInt16(env["VR_OSC_RECV_PORT"] ?? "") ?? 9001
+        Thread.detachNewThread { [weak self] in
+            let s = socket(AF_INET, SOCK_DGRAM, 0)
+            guard s >= 0 else { return }
+            defer { close(s) }
+            var one: Int32 = 1
+            setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, socklen_t(MemoryLayout<Int32>.size))
+            var addr = sockaddr_in()
+            addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            addr.sin_family = sa_family_t(AF_INET)
+            addr.sin_port = recvPort.bigEndian
+            addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+            let bound = withUnsafePointer(to: &addr) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    bind(s, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+            guard bound == 0 else { return }
+            var buf = [UInt8](repeating: 0, count: 1024)
+            while true {
+                let n = recv(s, &buf, buf.count, 0)
+                if n <= 0 { usleep(100_000); continue }
+                if let avtr = Self.parseAvatarChangeOSC(Data(buf.prefix(n))) {
+                    self?.onAvatarChanged(avtr)
+                }
+            }
+        }
+    }
+
+    private static func parseAvatarChangeOSC(_ data: Data) -> String? {
+        let prefix = Array("/avatar/change\0".utf8)
+        guard data.count > prefix.count + 4, Array(data.prefix(prefix.count)) == prefix else { return nil }
+        // Advance past padded address ("/avatar/change" is 14 bytes -> padded to 16)
+        var idx = 16
+        // Type tag ",s\0\0" -> 4 bytes
+        guard idx + 4 <= data.count, data[idx] == UInt8(ascii: ","), data[idx + 1] == UInt8(ascii: "s") else { return nil }
+        idx += 4
+        var end = idx
+        while end < data.count && data[end] != 0 { end += 1 }
+        guard end > idx else { return nil }
+        return String(decoding: data[idx..<end], as: UTF8.self)
+    }
+
+    private func onAvatarChanged(_ avatarId: String) {
+        lock.lock()
+        currentAvatarId = avatarId
+        lastAvatarScan = 0
+        lastFloat.removeAll()
+        lastBool.removeAll()
+        lock.unlock()
+    }
+
+    private func refreshAvatarConfigIfNeeded(now: UInt64) {
+        guard now - lastAvatarScan > 8_000_000_000 else { return }
+        lastAvatarScan = now
+        let targetId = currentAvatarId
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            self?.scanAvatarOscJson(preferredAvatarId: targetId)
+        }
+    }
+
+    private func scanAvatarOscJson(preferredAvatarId: String?) {
+        let fm = FileManager.default
+        let base = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/com.zagrios.obelisk/Prefixes")
+        guard let prefixes = try? fm.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { return }
+
+        var candidates: [(url: URL, mtime: Date)] = []
+        for pref in prefixes {
+            for rel in ["prefix/drive_c/users", "drive_c/users"] {
+                let usersDir = pref.appendingPathComponent(rel)
+                guard let users = try? fm.contentsOfDirectory(at: usersDir, includingPropertiesForKeys: nil) else { continue }
+                for u in users {
+                    let oscDir = u.appendingPathComponent("AppData/LocalLow/VRChat/VRChat/OSC")
+                    guard let usrDirs = try? fm.contentsOfDirectory(at: oscDir, includingPropertiesForKeys: nil) else { continue }
+                    for usr in usrDirs {
+                        let avDir = usr.appendingPathComponent("Avatars")
+                        guard let files = try? fm.contentsOfDirectory(at: avDir, includingPropertiesForKeys: [.contentModificationDateKey]) else { continue }
+                        for f in files where f.pathExtension == "json" {
+                            if let prefId = preferredAvatarId, f.deletingPathExtension().lastPathComponent == prefId {
+                                candidates.insert((f, Date.distantFuture), at: 0)
+                            } else {
+                                let m = (try? f.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+                                candidates.append((f, m))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        guard let best = candidates.max(by: { $0.mtime < $1.mtime })?.url,
+              var raw = try? Data(contentsOf: best) else { return }
+        // VRChat writes avatar OSC JSON files with a UTF-8 BOM (EF BB BF)
+        if raw.count >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF {
+            raw = raw.dropFirst(3)
+        }
+        guard let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any],
+              let params = json["parameters"] as? [[String: Any]] else { return }
+
+        let knownKeys = Set(Self.fallbackKeys + [
+            "EyeSqueezeLeft", "EyeSqueezeRight", "JawClench",
+            "MouthCornerSlantLeft", "MouthCornerSlantRight",
+            "MouthUpperLeft", "MouthUpperRight", "MouthLowerLeft", "MouthLowerRight",
+            "LipFunnelUpper", "LipFunnelLower", "LipPuckerFunnel",
+            "TongueFlat", "TongueDown"
+        ])
+
+        var floatBindings: [(address: String, key: String)] = []
+        var statusBools: [(address: String, isEye: Bool)] = []
+        struct BinAccum {
+            var key: String
+            var bits: [(Int, String)] = []
+            var neg: String?
+        }
+        var binMap: [String: BinAccum] = [:]
+
+        for p in params {
+            guard let inp = p["input"] as? [String: Any],
+                  let addr = inp["address"] as? String,
+                  let typ = inp["type"] as? String,
+                  addr.hasPrefix("/avatar/parameters/") else { continue }
+            let tail = String(addr.dropFirst("/avatar/parameters/".count))
+            let comps = tail.split(separator: "/").map(String.init)
+            guard let leaf = comps.last else { continue }
+            let prefixPath = comps.dropLast().joined(separator: "/")
+
+            if typ == "Float", knownKeys.contains(leaf) {
+                floatBindings.append((addr, leaf))
+            } else if typ == "Bool" {
+                if leaf == "EyeTrackingActive" {
+                    statusBools.append((addr, true))
+                } else if leaf == "LipTrackingActive" {
+                    statusBools.append((addr, false))
+                } else if leaf.hasSuffix("Negative") {
+                    let baseKey = String(leaf.dropLast("Negative".count))
+                    if knownKeys.contains(baseKey) {
+                        let groupKey = prefixPath + "/" + baseKey
+                        var acc = binMap[groupKey] ?? BinAccum(key: baseKey)
+                        acc.neg = addr
+                        binMap[groupKey] = acc
+                    }
+                } else {
+                    var digits = ""
+                    var idx = leaf.endIndex
+                    while idx > leaf.startIndex {
+                        let prev = leaf.index(before: idx)
+                        if leaf[prev].isNumber { digits.insert(leaf[prev], at: digits.startIndex); idx = prev }
+                        else { break }
+                    }
+                    if !digits.isEmpty, let bitVal = Int(digits), bitVal > 0, (bitVal & (bitVal - 1)) == 0 {
+                        let baseKey = String(leaf[..<idx])
+                        if knownKeys.contains(baseKey) {
+                            let groupKey = prefixPath + "/" + baseKey
+                            var acc = binMap[groupKey] ?? BinAccum(key: baseKey)
+                            acc.bits.append((bitVal, addr))
+                            binMap[groupKey] = acc
+                        }
+                    }
+                }
+            }
+        }
+
+        let binaryBindings: [BinaryBinding] = binMap.values.compactMap { acc in
+            guard !acc.bits.isEmpty else { return nil }
+            let sorted = acc.bits.sorted { $0.0 < $1.0 }
+            let maxVal = sorted.reduce(0) { $0 + $1.0 }
+            return BinaryBinding(key: acc.key, bits: sorted, negativeAddress: acc.neg, maxInt: maxVal)
+        }
+
+        let avName = (json["name"] as? String) ?? best.deletingPathExtension().lastPathComponent
+        guard !floatBindings.isEmpty || !binaryBindings.isEmpty else { return }
+
+        lock.lock()
+        let changed = avName != avatarLoadedName || floatBindings.count != avatarFloatBindings.count || binaryBindings.count != avatarBinaryBindings.count
+        avatarFloatBindings = floatBindings
+        avatarBinaryBindings = binaryBindings
+        avatarStatusBools = statusBools
+        avatarLoadedName = avName
+        if changed {
+            lastFloat.removeAll()
+            lastBool.removeAll()
+        }
+        lock.unlock()
+        if changed {
+            print("[vrcft] Matched VRChat avatar «\(avName)» (\(floatBindings.count) float, \(binaryBindings.count) binary FT params)")
+        }
+    }
+
+    private func isEnabled(now: UInt64) -> Bool {
+        if now - lastToggleCheck > 500_000_000 {
+            lastToggleCheck = now
+            if let s = try? String(contentsOfFile: "ft-toggle.txt", encoding: .utf8) {
+                let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty { enabled = t != "0" }
+            }
+        }
+        return enabled
+    }
+
+    func ingest(_ payload: Data) {
+        // Payload layout (after 0x0C tag):
+        // [0] flags (u8), [1..2] weightCount (u16 LE),
+        // [3..18] leftQ (4f), [19..34] rightQ (4f), [35..42] eyeConf (2f), [43..] weights (Nf)
+        guard payload.count >= 43 else { return }
+        let now = DispatchTime.now().uptimeNanoseconds
+
+        lock.lock()
+        guard isEnabled(now: now) else { lock.unlock(); return }
+        startAvatarListenerIfNeeded()
+        refreshAvatarConfigIfNeeded(now: now)
+        let firstLog = !loggedActive
+        if firstLog { loggedActive = true }
+        let floatBinds = avatarFloatBindings
+        let binBinds = avatarBinaryBindings
+        let statusBinds = avatarStatusBools
+        let forceRefresh = now - lastFullRefresh > 5_000_000_000
+        if forceRefresh { lastFullRefresh = now }
+        lock.unlock()
+        QuestProTongueTracker.shared.startIfAvailable()
+
+        let base = payload.startIndex
+        let flags = payload[base]
+        let weightCount = Int(payload[base + 1]) | (Int(payload[base + 2]) << 8)
+        guard payload.count >= 43 + weightCount * 4 else { return }
+
+        func readF(_ offset: Int) -> Float {
+            var bits: UInt32 = 0
+            let i = base + offset
+            bits |= UInt32(payload[i])
+            bits |= UInt32(payload[i + 1]) << 8
+            bits |= UInt32(payload[i + 2]) << 16
+            bits |= UInt32(payload[i + 3]) << 24
+            let f = Float(bitPattern: bits)
+            return f.isFinite ? f : 0
+        }
+
+        let leftValid = (flags & 0x01) != 0
+        let rightValid = (flags & 0x02) != 0
+        let faceValid = (flags & 0x04) != 0
+
+        if firstLog {
+            print("[vrcft] Quest Pro Eye & Face Tracking active → VRChat OSC 127.0.0.1:\(UInt16(bigEndian: dest.sin_port)) (eye=\(leftValid || rightValid), face=\(faceValid), weights=\(weightCount))")
+        }
+
+        var w = [Float](repeating: 0, count: 70)
+        if faceValid {
+            let n = min(weightCount, 70)
+            for idx in 0..<n { w[idx] = max(0, min(1, readF(43 + idx * 4))) }
+        }
+
+        // Convert OpenXR VIEW-space gaze quaternion to pitch/yaw
+        func gazeAngles(offset: Int) -> (yawRad: Float, pitchUpRad: Float) {
+            let qx = readF(offset), qy = readF(offset + 4), qz = readF(offset + 8), qw = readF(offset + 12)
+            // Forward (0, 0, -1) rotated by q
+            let dx = -2 * (qx * qz + qw * qy)
+            let dy = -2 * (qy * qz - qw * qx)
+            let dz = -(1 - 2 * (qx * qx + qy * qy))
+            let fwd = max(0.001 as Float, -dz)
+            return (atan2f(dx, fwd), atan2f(dy, fwd))
+        }
+
+        let lAng: (yawRad: Float, pitchUpRad: Float) = leftValid ? gazeAngles(offset: 3) : (0, 0)
+        let rAng: (yawRad: Float, pitchUpRad: Float) = rightValid ? gazeAngles(offset: 19) : lAng
+        let useL = leftValid ? lAng : rAng
+        let useR = rightValid ? rAng : lAng
+        let rad2deg: Float = 180.0 / Float.pi
+        let maxYaw: Float = 45.0 * Float.pi / 180.0
+        let maxPitch: Float = 35.0 * Float.pi / 180.0
+        func clamp11(_ x: Float) -> Float { max(-1, min(1, x)) }
+        func clamp01(_ x: Float) -> Float { max(0, min(1, x)) }
+
+        let eyeLeftX = clamp11(useL.yawRad / maxYaw)
+        let eyeLeftY = clamp11(useL.pitchUpRad / maxPitch)
+        let eyeRightX = clamp11(useR.yawRad / maxYaw)
+        let eyeRightY = clamp11(useR.pitchUpRad / maxPitch)
+        let eyeX = (eyeLeftX + eyeRightX) * 0.5
+        let eyeY = (eyeLeftY + eyeRightY) * 0.5
+
+        var msgs: [Data] = []
+        msgs.reserveCapacity(96)
+
+        // 1. VRChat Native Eye Tracking OSC (works on ALL VRChat avatars)
+        if leftValid || rightValid {
+            let lPitchVrc = max(-90, min(90, -useL.pitchUpRad * rad2deg))
+            let lYawVrc = max(-90, min(90, useL.yawRad * rad2deg))
+            let rPitchVrc = max(-90, min(90, -useR.pitchUpRad * rad2deg))
+            let rYawVrc = max(-90, min(90, useR.yawRad * rad2deg))
+            msgs.append(Self.oscMessage("/tracking/eye/LeftRightPitchYaw", floats: [lPitchVrc, lYawVrc, rPitchVrc, rYawVrc]))
+        }
+        if faceValid {
+            let closedAvg = clamp01((w[12] + w[13]) * 0.5)
+            msgs.append(Self.oscMessage("/tracking/eye/EyesClosedAmount", floats: [closedAvg]))
+        }
+
+        // 2. Build Unified Expressions v2 map from Meta Quest Pro XrFaceExpression2FB (0..69)
+        var ue: [String: Float] = [:]
+        ue.reserveCapacity(96)
+        ue["EyeLeftX"] = eyeLeftX
+        ue["EyeLeftY"] = eyeLeftY
+        ue["EyeRightX"] = eyeRightX
+        ue["EyeRightY"] = eyeRightY
+        ue["EyeX"] = eyeX
+        ue["EyeY"] = eyeY
+
+        if faceValid {
+            // VRCFaceTracking v5 Unified Expressions eyelid spec:
+            // EyeLid* = openness * 0.75 + wide * 0.25  (0.0 = closed, 0.75 = neutral open, 1.0 = wide!)
+            // Compensate slight Quest Pro closed-eye false trigger when looking down.
+            let closedL = clamp01(w[12] - w[14] * 0.20)
+            let closedR = clamp01(w[13] - w[15] * 0.20)
+            let openL = 1 - closedL, openR = 1 - closedR
+            let wideL = w[59], wideR = w[60]
+            let squintL = w[28], squintR = w[29]
+            let lidL = clamp01(openL * 0.75 + wideL * 0.25)
+            let lidR = clamp01(openR * 0.75 + wideR * 0.25)
+            let lidAvg = (lidL + lidR) * 0.5
+            ue["EyeClosedLeft"] = closedL
+            ue["EyeClosedRight"] = closedR
+            ue["EyeOpenLeft"] = openL
+            ue["EyeOpenRight"] = openR
+            ue["EyeLidLeft"] = lidL
+            ue["EyeLidRight"] = lidR
+            ue["EyeLid"] = lidAvg
+            ue["EyeWideLeft"] = wideL
+            ue["EyeWideRight"] = wideR
+            ue["EyeSquintLeft"] = squintL
+            ue["EyeSquintRight"] = squintR
+            ue["EyeSqueezeLeft"] = squintL
+            ue["EyeSqueezeRight"] = squintR
+            ue["EyeLidExpandedLeft"] = lidL
+            ue["EyeLidExpandedRight"] = lidR
+            ue["EyeLidExpanded"] = lidAvg
+            let expSqL = openL < 0.05 ? -squintL : lidL
+            let expSqR = openR < 0.05 ? -squintR : lidR
+            ue["EyeLidExpandedSqueezeLeft"] = clamp11(expSqL)
+            ue["EyeLidExpandedSqueezeRight"] = clamp11(expSqR)
+            ue["EyeLidExpandedSqueeze"] = clamp11((expSqL + expSqR) * 0.5)
+
+            // Brows
+            ue["BrowPinchLeft"] = w[0]
+            ue["BrowPinchRight"] = w[1]
+            ue["BrowLowererLeft"] = w[0]
+            ue["BrowLowererRight"] = w[1]
+            ue["BrowInnerUpLeft"] = w[22]
+            ue["BrowInnerUpRight"] = w[23]
+            ue["BrowOuterUpLeft"] = w[57]
+            ue["BrowOuterUpRight"] = w[58]
+            let browUpL = (w[22] + w[57]) * 0.5, browUpR = (w[23] + w[58]) * 0.5
+            ue["BrowUpLeft"] = browUpL
+            ue["BrowUpRight"] = browUpR
+            ue["BrowDownLeft"] = w[0]
+            ue["BrowDownRight"] = w[1]
+            ue["BrowExpressionLeft"] = clamp11(browUpL - w[0])
+            ue["BrowExpressionRight"] = clamp11(browUpR - w[1])
+
+            // Cheeks & Nose
+            ue["CheekPuffLeft"] = w[2]
+            ue["CheekPuffRight"] = w[3]
+            ue["CheekSquintLeft"] = w[4]
+            ue["CheekSquintRight"] = w[5]
+            ue["CheekSuckLeft"] = w[6]
+            ue["CheekSuckRight"] = w[7]
+            ue["CheekPuffSuckLeft"] = clamp11(w[2] - w[6])
+            ue["CheekPuffSuckRight"] = clamp11(w[3] - w[7])
+            ue["NoseSneerLeft"] = w[55]
+            ue["NoseSneerRight"] = w[56]
+            ue["NoseSneer"] = (w[55] + w[56]) * 0.5
+
+            // Jaw
+            ue["JawOpen"] = w[24]
+            ue["JawLeft"] = w[25]
+            ue["JawRight"] = w[26]
+            ue["JawX"] = clamp11(w[26] - w[25])
+            ue["JawForward"] = w[27]
+            ue["MouthClosed"] = w[50]
+            ue["JawClench"] = clamp01(w[50] - w[24])
+
+            // Mouth & Lips
+            ue["MouthUpperUpLeft"] = w[61]
+            ue["MouthUpperUpRight"] = w[62]
+            ue["MouthUpperUp"] = (w[61] + w[62]) * 0.5
+            ue["MouthLowerDownLeft"] = w[51]
+            ue["MouthLowerDownRight"] = w[52]
+            ue["MouthLowerDown"] = (w[51] + w[52]) * 0.5
+            ue["MouthCornerPullLeft"] = w[32]
+            ue["MouthCornerPullRight"] = w[33]
+            ue["MouthCornerSlantLeft"] = w[32]
+            ue["MouthCornerSlantRight"] = w[33]
+            ue["MouthFrownLeft"] = w[30]
+            ue["MouthFrownRight"] = w[31]
+            ue["MouthStretchLeft"] = w[42]
+            ue["MouthStretchRight"] = w[43]
+            ue["MouthDimpleLeft"] = w[10]
+            ue["MouthDimpleRight"] = w[11]
+            ue["MouthRaiserLower"] = w[8]
+            ue["MouthRaiserUpper"] = w[9]
+            ue["MouthPressLeft"] = w[38]
+            ue["MouthPressRight"] = w[39]
+            ue["MouthPress"] = (w[38] + w[39]) * 0.5
+            ue["MouthTightenerLeft"] = w[48]
+            ue["MouthTightenerRight"] = w[49]
+            ue["MouthUpperLeft"] = w[53]
+            ue["MouthUpperRight"] = w[54]
+            ue["MouthLowerLeft"] = w[53]
+            ue["MouthLowerRight"] = w[54]
+            ue["MouthX"] = clamp11(w[54] - w[53])
+            let sfL = clamp11(w[32] - w[30]), sfR = clamp11(w[33] - w[31])
+            ue["SmileFrownLeft"] = sfL
+            ue["SmileFrownRight"] = sfR
+            ue["SmileSadLeft"] = sfL
+            ue["SmileSadRight"] = sfR
+
+            ue["LipSuckLowerLeft"] = w[44]
+            ue["LipSuckUpperLeft"] = w[45]
+            ue["LipSuckLowerRight"] = w[46]
+            ue["LipSuckUpperRight"] = w[47]
+            ue["LipSuckUpper"] = (w[45] + w[47]) * 0.5
+            ue["LipSuckLower"] = (w[44] + w[46]) * 0.5
+            let lipSuck = (w[44] + w[45] + w[46] + w[47]) * 0.25
+            ue["LipSuck"] = lipSuck
+
+            ue["LipFunnelLowerLeft"] = w[34]
+            ue["LipFunnelUpperLeft"] = w[35]
+            ue["LipFunnelLowerRight"] = w[36]
+            ue["LipFunnelUpperRight"] = w[37]
+            ue["LipFunnelUpper"] = (w[35] + w[37]) * 0.5
+            ue["LipFunnelLower"] = (w[34] + w[36]) * 0.5
+            let lipFunnel = (w[34] + w[35] + w[36] + w[37]) * 0.25
+            ue["LipFunnel"] = lipFunnel
+
+            ue["LipPuckerUpperLeft"] = w[40]
+            ue["LipPuckerUpperRight"] = w[41]
+            ue["LipPuckerLowerLeft"] = w[40]
+            ue["LipPuckerLowerRight"] = w[41]
+            let lipPucker = (w[40] + w[41]) * 0.5
+            ue["LipPucker"] = lipPucker
+            ue["LipPuckerFunnel"] = max(lipPucker, lipFunnel)
+
+            // Tongue (XR_FB_face_tracking2 stock fallback + Rooted Quest Pro CoreML stereo upgrade!)
+            let nativeTongueOut: Float = weightCount >= 70 ? w[68] : 0
+            QuestProTongueTracker.shared.updateNativeTongueOut(nativeTongueOut)
+            if let exp = QuestProTongueTracker.shared.latestExpandedTongue() {
+                ue["TongueOut"] = exp.ext
+                ue["TongueLongStep1"] = clamp01(exp.ext * 2.0)
+                ue["TongueLongStep2"] = clamp01(exp.ext * 2.0 - 1.0)
+                ue["TongueUp"] = exp.up
+                ue["TongueDown"] = exp.down
+                ue["TongueLeft"] = exp.left
+                ue["TongueRight"] = exp.right
+                ue["TongueX"] = clamp11(exp.right - exp.left)
+                ue["TongueY"] = clamp11(exp.up - exp.down)
+                ue["TongueRoll"] = exp.roll
+                ue["TongueBendDown"] = exp.bendDown
+                ue["TongueCurlUp"] = exp.curlUp
+                ue["TongueSquish"] = exp.squish
+                ue["TongueFlat"] = exp.flat
+                ue["TongueTwistLeft"] = exp.twistLeft
+                ue["TongueTwistRight"] = exp.twistRight
+            } else if weightCount >= 70 {
+                let tongueOut = w[68]
+                ue["TongueOut"] = tongueOut
+                ue["TongueLongStep1"] = clamp01(tongueOut * 2.0)
+                ue["TongueLongStep2"] = clamp01(tongueOut * 2.0 - 1.0)
+                ue["TongueFlat"] = w[63]
+                ue["TongueCurlUp"] = w[64]
+                let tongueUp = max(w[64], w[65])
+                ue["TongueUp"] = tongueUp
+                ue["TongueY"] = clamp11(tongueUp - w[69] * 0.5)
+                ue["TongueX"] = 0
+                ue["TongueLeft"] = 0
+                ue["TongueRight"] = 0
+                ue["TongueSquish"] = w[69]
+                ue["TongueDown"] = 0
+                ue["TongueBendDown"] = 0
+                ue["TongueRoll"] = 0
+                ue["TongueTwistLeft"] = 0
+                ue["TongueTwistRight"] = 0
+            }
+        }
+
+        lock.lock()
+        func emitFloat(_ addr: String, _ val: Float) {
+            if !forceRefresh, let prev = lastFloat[addr], abs(val - prev) < 0.004 { return }
+            lastFloat[addr] = val
+            msgs.append(Self.oscMessage(addr, floats: [val]))
+        }
+        func emitBool(_ addr: String, _ val: Bool) {
+            if !forceRefresh, let prev = lastBool[addr], prev == val { return }
+            lastBool[addr] = val
+            msgs.append(Self.oscBoolMessage(addr, val))
+        }
+
+        if !floatBinds.isEmpty || !binBinds.isEmpty {
+            // Exact match for the user's currently worn VRChat avatar (float + Jerry's Templates binary bools!)
+            for s in statusBinds {
+                emitBool(s.address, s.isEye ? (leftValid || rightValid) : faceValid)
+            }
+            for b in floatBinds {
+                if let val = ue[b.key] { emitFloat(b.address, val) }
+            }
+            for b in binBinds {
+                guard let val = ue[b.key] else { continue }
+                let mag: Float
+                if let negAddr = b.negativeAddress {
+                    emitBool(negAddr, val < 0)
+                    mag = clamp01(abs(val))
+                } else {
+                    mag = clamp01(val)
+                }
+                let q = Int((mag * Float(b.maxInt)).rounded())
+                for bit in b.bits {
+                    emitBool(bit.address, (q & bit.weight) != 0)
+                }
+            }
+        } else {
+            // Universal VRCFaceTracking v5 float fallback (both FT/v2/ and v2/ prefixes)
+            for key in Self.fallbackKeys {
+                guard let val = ue[key] else { continue }
+                emitFloat("/avatar/parameters/FT/v2/\(key)", val)
+                emitFloat("/avatar/parameters/v2/\(key)", val)
+            }
+        }
+        lock.unlock()
+
+        if !msgs.isEmpty { sendBundles(msgs) }
+    }
+
+    private static func oscPadString(_ s: String) -> Data {
+        var d = Data(s.utf8)
+        d.append(0)
+        while d.count % 4 != 0 { d.append(0) }
+        return d
+    }
+
+    private static func oscMessage(_ address: String, floats: [Float]) -> Data {
+        var d = oscPadString(address)
+        d.append(oscPadString("," + String(repeating: "f", count: floats.count)))
+        for f in floats {
+            var be = f.bitPattern.bigEndian
+            withUnsafeBytes(of: &be) { d.append(contentsOf: $0) }
+        }
+        return d
+    }
+
+    private static func oscBoolMessage(_ address: String, _ value: Bool) -> Data {
+        var d = oscPadString(address)
+        d.append(oscPadString(value ? ",T" : ",F"))
+        return d
+    }
+
+    private func sendBundles(_ msgs: [Data]) {
+        let fd = ensureSocket()
+        guard fd >= 0 else { return }
+        let header = Data("#bundle\0".utf8) + Data([0, 0, 0, 0, 0, 0, 0, 1])
+        var packet = header
+        var count = 0
+
+        func flush() {
+            guard count > 0 else { return }
+            var addr = dest
+            packet.withUnsafeBytes { raw in
+                guard let base = raw.baseAddress else { return }
+                _ = withUnsafePointer(to: &addr) {
+                    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                        sendto(fd, base, packet.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                    }
+                }
+            }
+            packet = header
+            count = 0
+        }
+
+        for m in msgs {
+            if count > 0 && packet.count + 4 + m.count > 1200 { flush() }
+            var lenBe = Int32(m.count).bigEndian
+            withUnsafeBytes(of: &lenBe) { packet.append(contentsOf: $0) }
+            packet.append(m)
+            count += 1
+        }
+        flush()
+    }
+}
+
 let questLock = NSLock()
 /// fromWeb: llegó por server.py (la página web del navegador del Quest, sin emparejar): de ahí solo se aceptan poses y
 /// pedidos de cuadro completo (lo único que server.py manda)
 func handleQuestMessage(_ line: Data, fromWeb: Bool = false) {
     if line.first == 0x0B { if !fromWeb { MicOut.shared.push(line.dropFirst()) }; return }   // micrófono del visor (PCM)
+    if line.first == 0x0C { if !fromWeb { VRCFaceTrackingOSC.shared.ingest(line.dropFirst()) }; return }   // Quest Pro Eye & Face Tracking → VRCFT OSC
     questLock.lock(); defer { questLock.unlock() }
     guard let m = try? questDecoder.decode(InMsg.self, from: line) else { return }
     if fromWeb && m.type != "pose" && m.type != "key" { return }
@@ -4450,8 +5785,12 @@ func handleQuestMessage(_ line: Data, fromWeb: Bool = false) {
         if let on = m.on { Vigia.shared.set(on); if on { shared.requestKey() } }
         if let t = m.msg { Vigia.shared.say(t) }
     } else if m.type == "gamecfg" {   // Ajustes › Avanzado (desde el Quest)
-        GameProfiles.shared.apply(scope: m.scope ?? "all", scale: m.scale, auto: m.auto, fovk: m.fovk, index: m.index, vive: m.vive, reset: m.reset ?? false,
+        let scope = m.scope ?? "all"
+        GameProfiles.shared.apply(scope: scope, scale: m.scale, auto: m.auto, fovk: m.fovk, index: m.index, vive: m.vive, reset: m.reset ?? false,
                                   eye: m.eye, fps: m.fps, mbps: m.mbps, fov: m.fov)
+        if scope == "all", let sc = m.scale {
+            toHost(["qvb": "gamecfg", "scale": Int((sc * 100.0).rounded())])
+        }
         // Calidad propia del juego abierto (desde su menú): VRmin Host reinicia con esa, sin volver a abrir el juego
         let cur = GameProfiles.shared.current
         if m.scope == "game" && !cur.isEmpty && (m.eye != nil || m.fps != nil || m.mbps != nil || m.fov != nil || m.reset == true) {
@@ -4500,6 +5839,7 @@ native.onDeskDrop = { p in
         renderQueue.async { renderer.lobby?.requestWinKey(id) }
     } else { renderer.lobby?.requestDeskKey() }
 }
+NeptuneShare.start()
 native.start(handler: { handleQuestMessage($0) })
 
 // Micrófono del visor: el Quest graba solo mientras hay un juego abierto (y se le vuelve a avisar si se reconecta)

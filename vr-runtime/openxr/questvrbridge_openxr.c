@@ -768,60 +768,68 @@ static void gpu_release(void) {
     g_gpuW = g_gpuH = 0;
 }
 
-/* El nombre con el que DXMT registró la textura compartida en el sistema ("DXMT_shared_resource_…") */
+/* El nombre con el que DXMT registró la textura compartida en el sistema ("DXMT_shared_resource_…")
+ * o el token DMTX de Neptune en el motor Linux ("NEPTUNE_DMTX_<hex>"). */
 static int gpu_name(ID3D11Device *dev, ID3D11Texture2D *t, char out[64]) {
-    static KMT_HANDLE kdev; static int tried;
-    static kmt_fn pOpenAd, pCreateDev, pQuery, pOpenRes, pDestroy;
-    if (!kdev) {
-        if (tried) return 0;
-        tried = 1;
-        HMODULE gdi = GetModuleHandleA("gdi32.dll");
-        if (!gdi) gdi = LoadLibraryA("gdi32.dll");
-        if (!gdi) { logmsg("Copia directa: no está gdi32"); return 0; }
-        pOpenAd = (kmt_fn)GetProcAddress(gdi, "D3DKMTOpenAdapterFromLuid");
-        pCreateDev = (kmt_fn)GetProcAddress(gdi, "D3DKMTCreateDevice");
-        pQuery = (kmt_fn)GetProcAddress(gdi, "D3DKMTQueryResourceInfo");
-        pOpenRes = (kmt_fn)GetProcAddress(gdi, "D3DKMTOpenResource2");
-        pDestroy = (kmt_fn)GetProcAddress(gdi, "D3DKMTDestroyAllocation");
-        if (!pOpenAd || !pCreateDev || !pQuery || !pOpenRes || !pDestroy) { logmsg("Copia directa: este Wine no tiene recursos compartidos (D3DKMT)"); return 0; }
-        IDXGIDevice *dd = NULL; IDXGIAdapter *ad = NULL; DXGI_ADAPTER_DESC desc;
-        if (FAILED(ID3D11Device_QueryInterface(dev, &IID_IDXGIDevice, (void **)&dd)) || !dd) { logmsg("Copia directa: sin IDXGIDevice"); return 0; }
-        HRESULT hr = IDXGIDevice_GetAdapter(dd, &ad);
-        IDXGIDevice_Release(dd);
-        if (FAILED(hr) || !ad) { logmsg("Copia directa: sin adaptador"); return 0; }
-        hr = IDXGIAdapter_GetDesc(ad, &desc);
-        IDXGIAdapter_Release(ad);
-        if (FAILED(hr)) return 0;
-        KMT_OPENADAPTERFROMLUID oa; memset(&oa, 0, sizeof oa); oa.luid = desc.AdapterLuid;
-        LONG st = pOpenAd(&oa);
-        if (st) { logmsg("Copia directa: D3DKMTOpenAdapterFromLuid falló (%lx)", (unsigned long)st); return 0; }
-        KMT_CREATEDEVICE cd; memset(&cd, 0, sizeof cd); cd.a.hAdapter = oa.hAdapter;
-        st = pCreateDev(&cd);
-        if (st || !cd.hDevice) { logmsg("Copia directa: D3DKMTCreateDevice falló (%lx)", (unsigned long)st); return 0; }
-        kdev = cd.hDevice;
-    }
     IDXGIResource *r = NULL; HANDLE h = NULL;
     if (FAILED(ID3D11Texture2D_QueryInterface(t, &IID_IDXGIResource, (void **)&r)) || !r) { logmsg("Copia directa: sin IDXGIResource"); return 0; }
     HRESULT hr = IDXGIResource_GetSharedHandle(r, &h);
     IDXGIResource_Release(r);
     if (FAILED(hr) || !h) { logmsg("Copia directa: la textura no se pudo compartir (%lx)", (unsigned long)hr); return 0; }
-    uint8_t data[512]; memset(data, 0, sizeof data);
-    KMT_QUERYRESOURCEINFO q; memset(&q, 0, sizeof q);
-    q.hDevice = kdev; q.hGlobalShare = (KMT_HANDLE)(uintptr_t)h; q.pPrivateRuntimeData = data; q.PrivateRuntimeDataSize = sizeof data;
-    LONG st = pQuery(&q);
-    if (st || q.PrivateRuntimeDataSize < 54 || q.PrivateRuntimeDataSize > sizeof data) {
-        logmsg("Copia directa: D3DKMTQueryResourceInfo falló (%lx, %u bytes)", (unsigned long)st, q.PrivateRuntimeDataSize); return 0;
+
+    static KMT_HANDLE kdev; static int tried;
+    static kmt_fn pOpenAd, pCreateDev, pQuery, pOpenRes, pDestroy;
+    if (!kdev && !tried) {
+        tried = 1;
+        HMODULE gdi = GetModuleHandleA("gdi32.dll");
+        if (!gdi) gdi = LoadLibraryA("gdi32.dll");
+        if (gdi) {
+            pOpenAd = (kmt_fn)GetProcAddress(gdi, "D3DKMTOpenAdapterFromLuid");
+            pCreateDev = (kmt_fn)GetProcAddress(gdi, "D3DKMTCreateDevice");
+            pQuery = (kmt_fn)GetProcAddress(gdi, "D3DKMTQueryResourceInfo");
+            pOpenRes = (kmt_fn)GetProcAddress(gdi, "D3DKMTOpenResource2");
+            pDestroy = (kmt_fn)GetProcAddress(gdi, "D3DKMTDestroyAllocation");
+        }
+        if (pOpenAd && pCreateDev && pQuery && pOpenRes && pDestroy) {
+            IDXGIDevice *dd = NULL; IDXGIAdapter *ad = NULL; DXGI_ADAPTER_DESC desc;
+            if (SUCCEEDED(ID3D11Device_QueryInterface(dev, &IID_IDXGIDevice, (void **)&dd)) && dd) {
+                HRESULT ahr = IDXGIDevice_GetAdapter(dd, &ad);
+                IDXGIDevice_Release(dd);
+                if (SUCCEEDED(ahr) && ad) {
+                    ahr = IDXGIAdapter_GetDesc(ad, &desc);
+                    IDXGIAdapter_Release(ad);
+                    if (SUCCEEDED(ahr)) {
+                        KMT_OPENADAPTERFROMLUID oa; memset(&oa, 0, sizeof oa); oa.luid = desc.AdapterLuid;
+                        if (pOpenAd(&oa) == 0) {
+                            KMT_CREATEDEVICE cd; memset(&cd, 0, sizeof cd); cd.a.hAdapter = oa.hAdapter;
+                            if (pCreateDev(&cd) == 0 && cd.hDevice) kdev = cd.hDevice;
+                        }
+                    }
+                }
+            }
+        }
     }
-    KMT_OPENALLOCATIONINFO2 al; memset(&al, 0, sizeof al);
-    KMT_OPENRESOURCE o; memset(&o, 0, sizeof o);
-    o.hDevice = kdev; o.hGlobalShare = q.hGlobalShare; o.NumAllocations = 1; o.pOpenAllocationInfo2 = &al;
-    o.pPrivateRuntimeData = data; o.PrivateRuntimeDataSize = q.PrivateRuntimeDataSize;
-    st = pOpenRes(&o);
-    if (st) { logmsg("Copia directa: D3DKMTOpenResource2 falló (%lx)", (unsigned long)st); return 0; }
-    KMT_DESTROYALLOCATION da; memset(&da, 0, sizeof da); da.hDevice = kdev; da.hResource = o.hResource;
-    pDestroy(&da);
-    memcpy(out, data, 54); out[54] = 0;
-    if (strncmp(out, "DXMT_shared_resource_", 21) != 0) { logmsg("Copia directa: nombre inesperado («%.20s»)", out); return 0; }
+    if (kdev) {
+        uint8_t data[512]; memset(data, 0, sizeof data);
+        KMT_QUERYRESOURCEINFO q; memset(&q, 0, sizeof q);
+        q.hDevice = kdev; q.hGlobalShare = (KMT_HANDLE)(uintptr_t)h; q.pPrivateRuntimeData = data; q.PrivateRuntimeDataSize = sizeof data;
+        LONG st = pQuery(&q);
+        if (!st && q.PrivateRuntimeDataSize >= 54 && q.PrivateRuntimeDataSize <= sizeof data) {
+            KMT_OPENALLOCATIONINFO2 al; memset(&al, 0, sizeof al);
+            KMT_OPENRESOURCE o; memset(&o, 0, sizeof o);
+            o.hDevice = kdev; o.hGlobalShare = q.hGlobalShare; o.NumAllocations = 1; o.pOpenAllocationInfo2 = &al;
+            o.pPrivateRuntimeData = data; o.PrivateRuntimeDataSize = q.PrivateRuntimeDataSize;
+            if (pOpenRes(&o) == 0) {
+                KMT_DESTROYALLOCATION da; memset(&da, 0, sizeof da); da.hDevice = kdev; da.hResource = o.hResource;
+                pDestroy(&da);
+                memcpy(out, data, 54); out[54] = 0;
+                if (strncmp(out, "DXMT_shared_resource_", 21) == 0) return 1;
+            }
+        }
+    }
+    /* Motor Linux (voile-lkd / Neptune): IDXGIResource::GetSharedHandle devuelve un token opaco cuyo fd shm 'DMTX'
+     * virgl_render_server exporta directo a ObeliskVRRenderer vía socket UNIX. */
+    snprintf(out, 64, "NEPTUNE_DMTX_%016llx", (unsigned long long)(uintptr_t)h);
     return 1;
 }
 

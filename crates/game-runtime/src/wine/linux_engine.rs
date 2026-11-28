@@ -425,6 +425,8 @@ impl Adapter for LinuxEngine {
         }
         if config.settings.vr_mode.is_enabled() {
             crate::vr::prepare_linux_prefix(config, locations, _install)?;
+        } else {
+            crate::vr::disable_in_prefix(config);
         }
         match config.log.parent() {
             Some(logs) => crate::files::private_directory(logs)?,
@@ -482,16 +484,21 @@ impl Adapter for LinuxEngine {
                     .into_owned(),
             );
         }
-        // Without it, the window server shows all of the screen's pixels.
-        if config.settings.render_percent != crate::launch_settings::FULL_RENDER_PERCENT {
-            arguments.push("--render-percent".to_owned());
-            arguments.push(config.settings.render_percent.to_string());
-        }
-        if config.settings.metalfx_spatial {
-            arguments.extend(["--metalfx-spatial".to_owned(), "on".to_owned()]);
-        }
-        if config.settings.metalfx_framegen {
-            arguments.extend(["--metalfx-framegen".to_owned(), "on".to_owned()]);
+        // Desktop render-scale and MetalFX passes only apply to the flat window
+        // mirror. Skip them in VR mode so they don't burn GPU budget alongside
+        // ObeliskVRRenderer's own stereo MetalFX Spatial upscaling.
+        if !config.settings.vr_mode.is_enabled() {
+            // Without it, the window server shows all of the screen's pixels.
+            if config.settings.render_percent != crate::launch_settings::FULL_RENDER_PERCENT {
+                arguments.push("--render-percent".to_owned());
+                arguments.push(config.settings.render_percent.to_string());
+            }
+            if config.settings.metalfx_spatial {
+                arguments.extend(["--metalfx-spatial".to_owned(), "on".to_owned()]);
+            }
+            if config.settings.metalfx_framegen {
+                arguments.extend(["--metalfx-framegen".to_owned(), "on".to_owned()]);
+            }
         }
         if config.settings.voice_processing {
             arguments.extend(["--voice-processing".to_owned(), "on".to_owned()]);
