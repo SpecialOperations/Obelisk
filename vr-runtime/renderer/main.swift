@@ -2579,11 +2579,11 @@ final class DesktopCapture: NSObject, SCStreamOutput {
 
     func start() {
         if !CGPreflightScreenCaptureAccess() {
-            failed = "Falta el permiso de grabación de pantalla"
+            failed = tr("Falta el permiso de grabación de pantalla", "Screen Recording permission is required")
             if !Self.requestedAccess {
                 Self.requestedAccess = true
                 _ = CGRequestScreenCaptureAccess()
-                print("[escritorio] Falta el permiso de grabación de pantalla. Activá Obelisk en Ajustes del Sistema > Privacidad y seguridad > Grabación de pantalla y audio del sistema.")
+                print("[desktop] Screen Recording permission not granted. Enable Obelisk in System Settings > Privacy & Security > Screen & System Audio Recording.")
             }
             return
         }
@@ -2596,9 +2596,8 @@ final class DesktopCapture: NSObject, SCStreamOutput {
             }
             guard let content,
                   let d = content.displays.first(where: { $0.displayID == displayID }) ?? content.displays.first else {
-                failed = "Falta el permiso de grabación de pantalla"
-                print("[escritorio] No pude capturar la pantalla: \(err?.localizedDescription ?? "sin pantallas"). " +
-                      "Activá QuestVRBridge en Ajustes del Sistema > Privacidad y seguridad > Grabación de pantalla y audio del sistema.")
+                failed = tr("Falta el permiso de grabación de pantalla", "Screen Recording permission is required")
+                print("[desktop] Could not capture display: \(err?.localizedDescription ?? "no displays"). Enable Obelisk in System Settings > Privacy & Security > Screen & System Audio Recording.")
                 return
             }
             let cfg = SCStreamConfiguration()
@@ -2723,11 +2722,11 @@ final class VirtualMonitor {
         if display != nil { return nil }
         guard let descCls = NSClassFromString("CGVirtualDisplayDescriptor") as? NSObject.Type,
               let dispCls = NSClassFromString("CGVirtualDisplay") as? NSObject.Type else {
-            return "Esta versión de macOS no permite monitores virtuales"
+            return tr("Esta versión de macOS no permite monitores virtuales", "This version of macOS does not support virtual displays")
         }
         let desc = descCls.init()
-        guard Self.set(desc, "queue", DispatchQueue.main) || Self.set(desc, "dispatchQueue", DispatchQueue.main) else { return "macOS cambió los monitores virtuales" }
-        _ = Self.set(desc, "name", "QuestVRBridge")
+        guard Self.set(desc, "queue", DispatchQueue.main) || Self.set(desc, "dispatchQueue", DispatchQueue.main) else { return tr("macOS cambió los monitores virtuales", "macOS changed virtual display support") }
+        _ = Self.set(desc, "name", "Obelisk VR")
         _ = Self.set(desc, "maxPixelsWide", NSNumber(value: UInt32(3840)))
         _ = Self.set(desc, "maxPixelsHigh", NSNumber(value: UInt32(2400)))
         _ = Self.set(desc, "sizeInMillimeters", NSValue(size: NSSize(width: 600, height: 375)))
@@ -2738,11 +2737,11 @@ final class VirtualMonitor {
         guard let raw = (dispCls as AnyObject).perform(NSSelectorFromString("alloc"))?.takeUnretainedValue(),
               (raw as AnyObject).responds(to: initSel),
               let disp = (raw as AnyObject).perform(initSel, with: desc)?.takeRetainedValue() as? NSObject else {
-            return "No se pudo crear el monitor virtual"
+            return tr("No se pudo crear el monitor virtual", "Could not create virtual display")
         }
         display = disp
         displayID = (disp.value(forKey: "displayID") as? NSNumber)?.uint32Value ?? 0
-        if displayID == 0 || !apply(aspect: aspect) { display = nil; displayID = 0; return "No se pudo configurar el monitor virtual" }
+        if displayID == 0 || !apply(aspect: aspect) { display = nil; displayID = 0; return tr("No se pudo configurar el monitor virtual", "Could not configure virtual display") }
         print("[monitor] Segundo monitor creado (pantalla \(displayID))")
         return nil
     }
@@ -3297,7 +3296,7 @@ final class Lobby {
     }
 
     private func startMonitor() {
-        guard #available(macOS 13.0, *) else { monErr = "Necesita macOS 13 o más nuevo"; return }
+        guard #available(macOS 13.0, *) else { monErr = tr("Necesita macOS 13 o más nuevo", "Requires macOS 13 or newer"); return }
         if monitor.displayID != 0 { monEncoder.requestKey(); return }
         if let e = monitor.create(aspect: monAspect) { monErr = e; print("[monitor] \(e)"); return }
         monErr = ""
@@ -3711,7 +3710,7 @@ final class Lobby {
     private func launch(_ g: GameEntry) {
         lock.lock()
         if busy { lock.unlock(); return }
-        busy = true; status = "Preparando \(g.name)…"
+        busy = true; status = tr("Preparando \(g.name)…", "Preparing \(g.name)…")
         launchingQ = (g.id, g.name, Int(Date().timeIntervalSince1970))
         lock.unlock()
         print("[sala] Abriendo \(g.name) desde el visor")
@@ -3987,8 +3986,8 @@ final class Lobby {
         let H = CGFloat(TH), W = CGFloat(TW)
         ctx.setFillColor(CGColor(red: 0.07, green: 0.08, blue: 0.11, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
-        text("QuestVRBridge", 48, H - 95, 64, CGColor(red: 1, green: 1, blue: 1, alpha: 1), bold: true)
-        text("Apuntá con el control y apretá el gatillo · B/Y: centrar", 50, H - 145, 28, CGColor(red: 0.6, green: 0.65, blue: 0.75, alpha: 1))
+        text(env["OBELISK_VR_HOST"] == "1" ? "Obelisk VR" : "QuestVRBridge", 48, H - 95, 64, CGColor(red: 1, green: 1, blue: 1, alpha: 1), bold: true)
+        text(tr("Apuntá con el control y apretá el gatillo · B/Y: centrar", "Point with your controller and pull the trigger · B/Y: recenter"), 50, H - 145, 28, CGColor(red: 0.6, green: 0.65, blue: 0.75, alpha: 1))
         let rows = min(games.count, 9)
         for i in 0...(rows + (nativeNow ? 1 : 0)) {
             let top = CGFloat(170 + i * 92)
@@ -4005,13 +4004,13 @@ final class Lobby {
             }
             ctx.addPath(CGPath(roundedRect: r, cornerWidth: 16, cornerHeight: 16, transform: nil))
             ctx.fillPath()
-            var label = isExit ? "Salir del modo VR"
-                : isToggle ? (desktopOn ? "Ocultar el escritorio de la Mac" : "Ver el escritorio de la Mac") : games[i].name
+            var label = isExit ? tr("Salir del modo VR", "Exit VR Mode")
+                : isToggle ? (desktopOn ? tr("Ocultar el escritorio de la Mac", "Hide Mac Desktop") : tr("Ver el escritorio de la Mac", "Show Mac Desktop")) : games[i].name
             if label.count > 34 { label = String(label.prefix(33)) + "…" }
             text(label, 64, r.minY + 28, 38, CGColor(red: 0.95, green: 0.95, blue: 1, alpha: 1), bold: hov)
         }
         if games.isEmpty {
-            text("No hay juegos instalados en el Steam de QuestVRBridge", 48, H - 170 - 92 * CGFloat(nativeNow ? 2 : 1) - 50, 28, CGColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 1))
+            text(tr("No hay juegos instalados en el Steam de QuestVRBridge", "No VR games installed yet"), 48, H - 170 - 92 * CGFloat(nativeNow ? 2 : 1) - 50, 28, CGColor(red: 0.8, green: 0.8, blue: 0.85, alpha: 1))
         }
         if !st.isEmpty {
             text(st, 48, 48, 30, CGColor(red: 1, green: 0.85, blue: 0.3, alpha: 1))
